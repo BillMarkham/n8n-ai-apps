@@ -1,0 +1,34 @@
+# Node & local dev
+node_modules/
+.env
+.env.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+
+# Local proxy and ngrok binaries
+cors-proxy/
+ngrok.exe
+ngrok.yml
+*.ngrok.log
+
+# OS junk
+Thumbs.db
+desktop.ini
+
+# Build outputs (if any)
+dist/
+build/
+*.bak
+*.tmp
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+
+# n8n backups / exports
+*.json.backup
+n8n_backup_*.json
