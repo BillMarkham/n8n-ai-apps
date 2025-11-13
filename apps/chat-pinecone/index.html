@@ -1,35 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Pinecone – n8n AI App</title>
-  <link rel="stylesheet" href="theme.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Pinecone</title>
+  <link rel="stylesheet" href="theme.css" />
 </head>
+
 <body>
   <header>
     <h1>Chat Pinecone</h1>
-    <p class="subtitle">n8n RAG with Pinecone</p>
+    <p>n8n RAG with Pinecone</p>
+    <div id="status">
+      <span id="status-dot"></span>
+      <span id="status-text">Checking...</span>
+    </div>
   </header>
 
-  <main>
-    <div class="chat-container">
-      <div id="chatBox" class="chat-box">
-        <div class="ai-message">Hello! I’m ready to help with your Pinecone RAG chat.</div>
+  <div id="header-spacer"></div>
+
+  <!-- FLEX WRAPPER pushes footer to page bottom -->
+  <div id="page-content">
+    <main id="chat-wrapper">
+      <div id="chat-container">
+        <div id="chat-inner">
+          <div class="message bot-message">
+            <div class="bot-bubble">
+              Hello Bill 👋 I'm ready to help with your Pinecone RAG chat.
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="input-area">
-        <textarea id="userInput" placeholder="Ask your question here..."></textarea>
-        <button id="sendBtn" title="Send"><span>➤</span></button>
+      <div id="input-area">
+        <input id="user-input" type="text" placeholder="Ask your question here..." />
+        <button id="send-button">➤</button>
       </div>
-    </div>
-  </main>
+    </main>
+  </div>
 
   <footer>
-    © 2025 Bill Markham – n8n AI Apps | Old Windsor, UK | 
-    <span id="localTime"></span>
+    © 2025 Bill Markham — n8n AI Apps | Old Windsor, UK |
+    <span id="time"></span>
   </footer>
 
   <script src="script.js"></script>
+  <script>
+    function updateTime() {
+      const now = new Date();
+      document.getElementById("time").textContent =
+        now.toLocaleString("en-GB", { timeZone: "Europe/London" });
+    }
+    updateTime();
+    setInterval(updateTime, 60000);
+  </script>
 </body>
 </html>
