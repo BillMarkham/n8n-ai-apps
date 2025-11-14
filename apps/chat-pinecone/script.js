@@ -1,165 +1,96 @@
-// ===========================================================
-// Chat Pinecone Web App — n8n RAG Frontend
-// Bill Markham — final version with smooth top alignment
-// ===========================================================
-
-const API_BASE = "https://5af501d7ca3c.ngrok-free.app/chatpine"; // proxy endpoint
-
 const chatContainer = document.getElementById("chat-container");
-const chatInner = document.getElementById("chat-inner");
-const inputField = document.getElementById("user-input");
-const sendButton = document.getElementById("send-button");
-const statusDot = document.getElementById("status-dot");
-const statusText = document.getElementById("status-text");
+const messageForm = document.getElementById("message-form");
+const messageInput = document.getElementById("message-input");
+const connectionStatus = document.getElementById("connection-status");
 
-let typingBubble = null;
+const N8N_WEBHOOK_URL = "http://localhost:4000/chatpine";
 
-// ===========================================================
-// 🟢 Connection Status (auto-ping every 10s)
-// ===========================================================
-async function checkConnection() {
-  try {
-    const res = await fetch(API_BASE, { method: "OPTIONS" });
-    const connected = res.ok;
-    statusDot.style.background = connected ? "limegreen" : "red";
-    statusText.textContent = connected ? "Connected" : "Disconnected";
-  } catch {
-    statusDot.style.background = "red";
-    statusText.textContent = "Disconnected";
-  }
-}
-checkConnection();
-setInterval(checkConnection, 10000);
-
-// ===========================================================
-// 💬 Smooth scroll helper — align latest message ~50px below header
-// ===========================================================
-function scrollToMessage(element) {
-  const containerRect = chatContainer.getBoundingClientRect();
-  const elementRect = element.getBoundingClientRect();
-
-  // Slight positive offset to keep input bubble fully visible
-  const offset = elementRect.top - containerRect.top + 10;
-
-  // avoid small jitter
-  if (Math.abs(offset) > 5) {
-    chatContainer.scrollBy({
-      top: offset,
-      behavior: "smooth",
-    });
-  }
+// Scroll helper
+function scrollToBottom() {
+  chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// ===========================================================
-// 💬 Append message bubbles (user / bot)
-// ===========================================================
-function appendMessage(content, sender, isHTML = false) {
-  const msg = document.createElement("div");
-  msg.classList.add("message", sender === "user" ? "user-message" : "bot-message");
-
+// Add a message bubble
+function addMessage(content, sender = "bot") {
   const bubble = document.createElement("div");
-  bubble.classList.add(sender === "user" ? "user-bubble" : "bot-bubble");
+  bubble.classList.add("message-bubble");
+  if (sender === "user") bubble.classList.add("user-bubble");
+  else bubble.classList.add("bot-bubble");
 
-  if (isHTML) {
-    const sandbox = document.createElement("div");
-    sandbox.classList.add("bot-html-wrapper");
-    sandbox.innerHTML = content
-      .replace(/<\/?html[^>]*>/gi, "")
-      .replace(/<\/?body[^>]*>/gi, "")
-      .replace(/\sstyle="[^"]*"/gi, "");
-    bubble.appendChild(sandbox);
-  } else {
-    bubble.textContent = content;
-  }
-
-  msg.appendChild(bubble);
-  chatInner.appendChild(msg);
-
-  // Scroll the new message into position
-  scrollToMessage(msg);
+  bubble.innerHTML = content;
+  chatContainer.appendChild(bubble);
+  scrollToBottom();
 }
 
-// ===========================================================
-// ⌛ Typing indicator
-// ===========================================================
+// Typing indicator
 function showTyping() {
-  typingBubble = document.createElement("div");
-  typingBubble.classList.add("message", "bot-message");
+  const wrap = document.createElement("div");
+  wrap.classList.add("message-bubble", "bot-bubble", "typing");
 
-  const inner = document.createElement("div");
-  inner.classList.add("bot-bubble");
-  inner.innerHTML = `<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>`;
+  wrap.innerHTML = `
+    <div class="typing-bubble">
+      <span class="typing-dot"></span>
+      <span class="typing-dot"></span>
+      <span class="typing-dot"></span>
+    </div>
+  `;
 
-  typingBubble.appendChild(inner);
-  chatInner.appendChild(typingBubble);
-  scrollToMessage(typingBubble);
+  chatContainer.appendChild(wrap);
+  scrollToBottom();
 }
 
-function hideTyping() {
-  if (typingBubble) {
-    typingBubble.remove();
-    typingBubble = null;
-  }
+function removeTyping() {
+  const t = document.querySelector(".typing");
+  if (t) t.remove();
 }
 
-// ===========================================================
-// 📤 Send user message to proxy → n8n
-// ===========================================================
-async function sendMessage() {
-  const question = inputField.value.trim();
-  if (!question) return;
+// Initial greeting (matches what you want)
+function loadGreeting() {
+  addMessage("Hello Bill 👋 I'm ready to help with your Pinecone RAG chat.", "bot");
+}
 
-  appendMessage(question, "user");
-  inputField.value = "";
-  showTyping();
+loadGreeting();
 
+// Call proxy → n8n, expecting TEXT (HTML) back
+async function sendToN8N(question) {
   try {
-    const res = await fetch(API_BASE, {
+    const res = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question })
     });
 
-    const raw = await res.text();
-    hideTyping();
-
     if (!res.ok) {
-      appendMessage(`HTTP ${res.status}: ${raw}`, "bot", true);
-      return;
+      return "Error contacting n8n webhook.";
     }
 
-    if (raw.trim().startsWith("<")) {
-      appendMessage(raw, "bot", true);
-    } else {
-      try {
-        const json = JSON.parse(raw);
-        const output = json.answer || json.message || JSON.stringify(json);
-        appendMessage(output, "bot", true);
-      } catch {
-        appendMessage(raw, "bot", true);
-      }
-    }
-
-    // Keep reply visible and aligned
-    scrollToMessage(chatInner.lastElementChild);
+    const text = await res.text(); // n8n returns HTML/text
+    return text;
   } catch (err) {
-    hideTyping();
-    appendMessage("Error contacting n8n webhook.", "bot");
+    return "Network error while contacting n8n.";
   }
 }
 
-// ===========================================================
-// 🎛️ Event Listeners
-// ===========================================================
-sendButton.addEventListener("click", sendMessage);
-inputField.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") sendMessage();
+// Form submission handler
+messageForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const text = messageInput.value.trim();
+  if (!text) return;
+
+  addMessage(text, "user");
+  messageInput.value = "";
+
+  showTyping();
+  const reply = await sendToN8N(text);
+  removeTyping();
+
+  addMessage(reply, "bot");
 });
 
-// ===========================================================
-// 👋 Align greeting bubble when page first loads
-// ===========================================================
-window.addEventListener("load", () => {
-  const firstMsg = chatInner.firstElementChild;
-  if (firstMsg) scrollToMessage(firstMsg);
-});
+// Optional: make the pill purely cosmetic for now
+setTimeout(() => {
+  connectionStatus.textContent = "● Connected";
+  connectionStatus.style.background = "#ddffdd";
+  connectionStatus.style.color = "#006600";
+}, 500);

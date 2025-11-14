@@ -6,53 +6,39 @@
   <title>Chat Pinecone</title>
   <link rel="stylesheet" href="theme.css" />
 </head>
-
 <body>
-  <header>
-    <h1>Chat Pinecone</h1>
-    <p>n8n RAG with Pinecone</p>
-    <div id="status">
-      <span id="status-dot"></span>
-      <span id="status-text">Checking...</span>
+  <!-- Top header -->
+  <header class="app-header">
+    <div class="header-title">
+      <h1>Chat Pinecone</h1>
+      <p>n8n RAG with Pinecone</p>
+    </div>
+    <div id="connection-status" class="status-pill disconnected">
+      ● Disconnected
     </div>
   </header>
 
-  <div id="header-spacer"></div>
+  <!-- Main area: chat -->
+  <main id="chat-wrapper">
+    <div id="chat-container"></div>
+  </main>
 
-  <!-- FLEX WRAPPER pushes footer to page bottom -->
-  <div id="page-content">
-    <main id="chat-wrapper">
-      <div id="chat-container">
-        <div id="chat-inner">
-          <div class="message bot-message">
-            <div class="bot-bubble">
-              Hello Bill 👋 I'm ready to help with your Pinecone RAG chat.
-            </div>
-          </div>
-        </div>
-      </div>
+  <!-- Input bar -->
+  <form id="message-form" class="input-bar">
+    <input
+      id="message-input"
+      type="text"
+      placeholder="Type your message..."
+      autocomplete="off"
+    />
+    <button type="submit" id="send-btn" class="send-btn">➤</button>
+  </form>
 
-      <div id="input-area">
-        <input id="user-input" type="text" placeholder="Ask your question here..." />
-        <button id="send-button">➤</button>
-      </div>
-    </main>
-  </div>
-
-  <footer>
+  <!-- Footer -->
+  <footer class="footer">
     © 2025 Bill Markham — n8n AI Apps | Old Windsor, UK |
-    <span id="time"></span>
   </footer>
 
   <script src="script.js"></script>
-  <script>
-    function updateTime() {
-      const now = new Date();
-      document.getElementById("time").textContent =
-        now.toLocaleString("en-GB", { timeZone: "Europe/London" });
-    }
-    updateTime();
-    setInterval(updateTime, 60000);
-  </script>
 </body>
 </html>
