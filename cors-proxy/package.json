@@ -1,0 +1,9 @@
+{
+  "name": "cors-proxy",
+  "version": "1.0.0",
+  "description": "Simple CORS proxy for n8n",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
