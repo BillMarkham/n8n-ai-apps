@@ -9,7 +9,6 @@ pnpm-debug.log*
 .DS_Store
 
 # Local proxy and ngrok binaries
-cors-proxy/
 ngrok.exe
 ngrok.yml
 *.ngrok.log

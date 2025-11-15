@@ -5,37 +5,33 @@ const connectionStatus = document.getElementById("connection-status");
 
 const N8N_WEBHOOK_URL = "http://localhost:4000/chatpine";
 
-// Scroll helper
+/* Smooth scroll helper */
 function scrollToBottom() {
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  setTimeout(() => {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }, 50);
 }
 
-// Add a message bubble
+/* Render a chat bubble */
 function addMessage(content, sender = "bot") {
   const bubble = document.createElement("div");
-  bubble.classList.add("message-bubble");
-  if (sender === "user") bubble.classList.add("user-bubble");
-  else bubble.classList.add("bot-bubble");
-
+  bubble.className = `message-bubble ${sender}-bubble`;
   bubble.innerHTML = content;
   chatContainer.appendChild(bubble);
   scrollToBottom();
 }
 
-// Typing indicator
+/* Typing indicator */
 function showTyping() {
-  const wrap = document.createElement("div");
-  wrap.classList.add("message-bubble", "bot-bubble", "typing");
-
-  wrap.innerHTML = `
+  const bubble = document.createElement("div");
+  bubble.className = "message-bubble bot-bubble typing";
+  bubble.innerHTML = `
     <div class="typing-bubble">
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
       <span class="typing-dot"></span>
-    </div>
-  `;
-
-  chatContainer.appendChild(wrap);
+    </div>`;
+  chatContainer.appendChild(bubble);
   scrollToBottom();
 }
 
@@ -44,14 +40,13 @@ function removeTyping() {
   if (t) t.remove();
 }
 
-// Initial greeting (matches what you want)
+/* Greeting */
 function loadGreeting() {
-  addMessage("Hello Bill 👋 I'm ready to help with your Pinecone RAG chat.", "bot");
+  addMessage("I'm ready to help with your Pinecone RAG chat.", "bot");
 }
-
 loadGreeting();
 
-// Call proxy → n8n, expecting TEXT (HTML) back
+/* Call proxy → n8n */
 async function sendToN8N(question) {
   try {
     const res = await fetch(N8N_WEBHOOK_URL, {
@@ -60,21 +55,17 @@ async function sendToN8N(question) {
       body: JSON.stringify({ question })
     });
 
-    if (!res.ok) {
-      return "Error contacting n8n webhook.";
-    }
+    if (!res.ok) return "Error contacting n8n webhook.";
 
-    const text = await res.text(); // n8n returns HTML/text
-    return text;
-  } catch (err) {
-    return "Network error while contacting n8n.";
+    return await res.text();
+  } catch {
+    return "Network error contacting n8n.";
   }
 }
 
-// Form submission handler
+/* Submit handler */
 messageForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-
   const text = messageInput.value.trim();
   if (!text) return;
 
@@ -88,9 +79,9 @@ messageForm.addEventListener("submit", async (e) => {
   addMessage(reply, "bot");
 });
 
-// Optional: make the pill purely cosmetic for now
+/* Fake connection pill */
 setTimeout(() => {
   connectionStatus.textContent = "● Connected";
   connectionStatus.style.background = "#ddffdd";
   connectionStatus.style.color = "#006600";
-}, 500);
+}, 300);
