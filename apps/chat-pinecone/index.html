@@ -1,34 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Chat Pinecone</title>
-<link rel="stylesheet" href="theme.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Pinecone</title>
+
+    <link rel="stylesheet" href="theme.css" />
 </head>
+
 <body>
+    <!-- HEADER -->
+    <header class="header">
+        <h1>Chat Pinecone</h1>
+        <p>n8n RAG with Pinecone</p>
 
-<header class="header">
-  <div class="title-block">
-    <h1>Chat Pinecone</h1>
-    <div class="subtitle">n8n RAG with Pinecone</div>
-  </div>
-  <div id="connection-status" class="status-pill">● Connected</div>
-</header>
+        <div id="connection-status" class="status connected">
+            <span class="dot"></span> Connected
+        </div>
+    </header>
 
-<main>
-  <div id="chat-container" class="chat-container"></div>
+    <!-- CHAT AREA -->
+    <main id="chat-container">
+        <div id="chat-wrapper"></div>
+    </main>
 
-  <form id="message-form" class="message-form">
-    <input id="message-input" type="text" placeholder="Type your message..." autocomplete="off" />
-    <button type="submit" class="send-btn">➤</button>
-  </form>
-</main>
+    <!-- INPUT AREA -->
+    <form id="message-form" class="input-area">
+        <input
+            id="message-input"
+            type="text"
+            placeholder="Type your message..."
+            autocomplete="off"
+        />
+        <button class="send-button" type="submit">
+            <span class="arrow">➤</span>
+        </button>
+    </form>
 
-<footer class="footer">
-  © 2025 Bill Markham — n8n AI Apps | Old Windsor, UK |
-</footer>
+    <!-- FOOTER -->
+    <footer class="footer">
+        © 2025 Bill Markham — n8n AI Apps | Old Windsor, UK
+    </footer>
 
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
