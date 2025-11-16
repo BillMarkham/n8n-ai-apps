@@ -1,32 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chat Pinecone</title>
-    <link rel="stylesheet" href="theme.css" />
+  <meta charset="UTF-8" />
+  <title>n8n RAG with Pinecone</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="stylesheet" href="theme.css" />
 </head>
-
 <body>
-    <div id="app">
-        <header>
-            <h1>Chat Pinecone</h1>
-            <p>n8n RAG with Pinecone</p>
-            <div id="status" class="connected">● Connected</div>
-        </header>
+  <div class="app-shell">
+    <div class="app-card">
 
-        <main id="chat-window">
-            <div id="messages"></div>
-        </main>
+      <!-- HEADER BOX -->
+      <div class="header-box">
+        <div class="header-content">
+          <h1>n8n RAG with Pinecone</h1>
+          <p>Local assistant running via n8n + Pinecone</p>
+        </div>
+        <div class="status-pill status-connected">
+          <span class="status-dot"></span>
+          <span class="status-text">Connected</span>
+        </div>
+      </div>
 
-        <footer>
-            <form id="chat-form">
-                <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off"/>
-                <button type="submit" id="send-btn">➤</button>
-            </form>
-        </footer>
+      <!-- CHAT AREA -->
+      <main class="chat-shell">
+        <section id="chatContainer" class="chat-container" aria-live="polite">
+          <div class="message-row bot">
+            <div class="message-bubble bot fade-in">
+              Hi, I’m your Pinecone RAG assistant.
+            </div>
+          </div>
+        </section>
+
+        <!-- Thinking / typing indicator -->
+        <div id="typingIndicator" class="typing-indicator hidden">
+          <div class="typing-bubble">
+            <span class="typing-label">Thinking…</span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
+        </div>
+      </main>
+
+      <!-- FOOTER / INPUT BAR -->
+      <form id="chatForm" class="input-bar" autocomplete="off">
+        <textarea
+          id="userInput"
+          class="input-textarea"
+          rows="1"
+          placeholder="Type your question about the Pinecone data…"
+        ></textarea>
+        <button id="sendButton" class="send-button" type="submit">Send</button>
+      </form>
+
     </div>
+  </div>
 
-    <script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
