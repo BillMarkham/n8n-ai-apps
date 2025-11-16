@@ -1,56 +1,67 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const chatWrapper = document.getElementById("chat-wrapper");
-    const form = document.getElementById("message-form");
-    const input = document.getElementById("message-input");
+// GPT-5 – chat-pinecone – direct to n8n (no proxy)
 
-    // Initial Greeting
-    addMessage("bot", "Hello Bill 👋 I'm ready to help with your Pinecone RAG chat.");
+const messagesDiv = document.getElementById("messages");
+const form = document.getElementById("chat-form");
+const input = document.getElementById("user-input");
 
-    form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const text = input.value.trim();
-        if (!text) return;
+const N8N_URL = "http://localhost:5678/webhook/chatpine";
 
-        addMessage("user", text);
-        input.value = "";
+// Add message to chat window
+function addMessage(content, sender = "bot", html = false) {
+    const msg = document.createElement("div");
+    msg.classList.add("message");
+    if (sender === "user") msg.classList.add("user");
 
+    if (html) {
+        msg.innerHTML = content;
+    } else {
+        msg.textContent = content;
+    }
+
+    messagesDiv.appendChild(msg);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// Greeting
+addMessage("Hello Bill 👋 I'm ready to help with your Pinecone RAG chat.", "bot");
+
+form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const text = input.value.trim();
+    if (!text) return;
+
+    addMessage(text, "user");
+    input.value = "";
+
+    try {
+        const response = await fetch(N8N_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: text })
+        });
+
+        const raw = await response.text();   // ← always read as text first
+
+        // Try JSON first
+        let json = null;
         try {
-            const proxyUrl = "http://localhost:4000/chatpine";
-
-            const response = await fetch(proxyUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question: text })
-            });
-
-            const resultText = await response.text();   // ← IMPORTANT: result is HTML, not JSON
-
-            if (!response.ok) {
-                addMessage("bot", "Error contacting server.");
-                return;
-            }
-
-            // Add bot reply as HTML
-            addMessage("bot", resultText);
-
-        } catch (err) {
-            console.error("Error:", err);
-            addMessage("bot", "Error contacting server.");
+            json = JSON.parse(raw);
+        } catch (_) {
+            json = null;
         }
-    });
 
-    function addMessage(sender, text) {
-        const msg = document.createElement("div");
-        msg.className = sender === "bot" ? "bot-message" : "user-message";
-
-        // insert HTML from n8n for bot, textContent for user
-        if (sender === "bot") {
-            msg.innerHTML = text;
+        if (json && json.response_html) {
+            addMessage(json.response_html, "bot", true);
+        } else if (json && json.response) {
+            addMessage(json.response, "bot");
         } else {
-            msg.textContent = text;
+            // Otherwise treat entire response as HTML
+            addMessage(raw, "bot", true);
         }
 
-        chatWrapper.appendChild(msg);
-        chatWrapper.scrollTop = chatWrapper.scrollHeight;
+    } catch (err) {
+        addMessage("Error contacting server.", "bot");
+        console.error(err);
     }
 });

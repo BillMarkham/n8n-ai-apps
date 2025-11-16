@@ -4,43 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat Pinecone</title>
-
     <link rel="stylesheet" href="theme.css" />
 </head>
 
 <body>
-    <!-- HEADER -->
-    <header class="header">
-        <h1>Chat Pinecone</h1>
-        <p>n8n RAG with Pinecone</p>
+    <div id="app">
+        <header>
+            <h1>Chat Pinecone</h1>
+            <p>n8n RAG with Pinecone</p>
+            <div id="status" class="connected">● Connected</div>
+        </header>
 
-        <div id="connection-status" class="status connected">
-            <span class="dot"></span> Connected
-        </div>
-    </header>
+        <main id="chat-window">
+            <div id="messages"></div>
+        </main>
 
-    <!-- CHAT AREA -->
-    <main id="chat-container">
-        <div id="chat-wrapper"></div>
-    </main>
-
-    <!-- INPUT AREA -->
-    <form id="message-form" class="input-area">
-        <input
-            id="message-input"
-            type="text"
-            placeholder="Type your message..."
-            autocomplete="off"
-        />
-        <button class="send-button" type="submit">
-            <span class="arrow">➤</span>
-        </button>
-    </form>
-
-    <!-- FOOTER -->
-    <footer class="footer">
-        © 2025 Bill Markham — n8n AI Apps | Old Windsor, UK
-    </footer>
+        <footer>
+            <form id="chat-form">
+                <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off"/>
+                <button type="submit" id="send-btn">➤</button>
+            </form>
+        </footer>
+    </div>
 
     <script src="script.js"></script>
 </body>
