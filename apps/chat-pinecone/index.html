@@ -1,62 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>n8n RAG with Pinecone</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <link rel="stylesheet" href="theme.css" />
+    <meta charset="UTF-8" />
+    <title>n8n RAG with Pinecone</title>
+    <link rel="stylesheet" href="theme.css" />
 </head>
-<body>
-  <div class="app-shell">
-    <div class="app-card">
 
-      <!-- HEADER BOX -->
-      <div class="header-box">
-        <div class="header-content">
-          <h1>n8n RAG with Pinecone</h1>
-          <p>Local assistant running via n8n + Pinecone</p>
-        </div>
-        <div class="status-pill status-connected">
-          <span class="status-dot"></span>
-          <span class="status-text">Connected</span>
-        </div>
-      </div>
-
-      <!-- CHAT AREA -->
-      <main class="chat-shell">
-        <section id="chatContainer" class="chat-container" aria-live="polite">
-          <div class="message-row bot">
-            <div class="message-bubble bot fade-in">
-              Hi, I’m your Pinecone RAG assistant.
+<body data-theme="dark">
+    <div class="app-shell">
+        <nav class="top-bar">
+            <div class="brand-stack">
+                <span class="eyebrow">n8n + Pinecone</span>
+                <h1>Research Copilot</h1>
+                <p class="lead">Ask anything about the indexed Pinecone workspace.</p>
             </div>
-          </div>
-        </section>
 
-        <!-- Thinking / typing indicator -->
-        <div id="typingIndicator" class="typing-indicator hidden">
-          <div class="typing-bubble">
-            <span class="typing-label">Thinking…</span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-          </div>
+            <div class="top-actions">
+                <button id="themeToggle" type="button" class="ghost-btn ghost-small">Light mode</button>
+                <div class="status-pill">
+                    <span class="status-dot online"></span>
+                    Connected to localhost
+                </div>
+            </div>
+        </nav>
+
+        <div class="layout">
+            <section class="chat-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">Conversation</p>
+                        <h2>Curious about your data?</h2>
+                    </div>
+                    <button class="ghost-btn" type="button">New Thread</button>
+                </div>
+
+                <main id="chatContainer" class="chat-thread"></main>
+                <div id="typingIndicator" class="typing-indicator hidden">n8n is thinking...</div>
+
+                <form id="chatForm" class="input-row">
+                    <input
+                        id="userInput"
+                        type="text"
+                        placeholder="Try &quot;Summarize last week's Pinecone updates.&quot;"
+                        autocomplete="off"
+                    />
+                    <button type="submit" class="send-btn">Send</button>
+                </form>
+            </section>
+
+            <aside class="info-panel">
+                <div class="panel-card">
+                    <p class="eyebrow">Sources</p>
+                    <h3>Embedding Memory</h3>
+                    <p class="panel-text">
+                        Responses blend the latest Pinecone snapshot with your local references.
+                    </p>
+                    <ul class="pill-list">
+                        <li>Changelog</li>
+                        <li>API Cookbook</li>
+                        <li>Architecture Notes</li>
+                    </ul>
+                </div>
+
+                <div class="panel-card">
+                    <p class="eyebrow">Tips</p>
+                    <ul class="tips">
+                        <li>Ask for bullet summaries to compare releases.</li>
+                        <li>Reference error logs to debug flows faster.</li>
+                        <li>Request citations to jump into original docs.</li>
+                    </ul>
+                </div>
+            </aside>
         </div>
-      </main>
-
-      <!-- FOOTER / INPUT BAR -->
-      <form id="chatForm" class="input-bar" autocomplete="off">
-        <textarea
-          id="userInput"
-          class="input-textarea"
-          rows="1"
-          placeholder="Type your question about the Pinecone data…"
-        ></textarea>
-        <button id="sendButton" class="send-button" type="submit">Send</button>
-      </form>
-
     </div>
-  </div>
 
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

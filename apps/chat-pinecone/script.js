@@ -1,112 +1,129 @@
-// script.js – direct-call mode for chat-pinecone
-// Uses http://localhost:5678/webhook/chatpine
+// ---------------------------------------------
+// CONFIG
+// ---------------------------------------------
+const N8N_URL = "http://localhost:5678/webhook/chatpine";   // your existing working n8n webhook
 
-document.addEventListener("DOMContentLoaded", () => {
-  const n8nEndpoint = "http://localhost:5678/webhook/chatpine";
+// ---------------------------------------------
+// DOM ELEMENTS
+// ---------------------------------------------
+const chatContainer = document.getElementById("chatContainer");
+const chatForm = document.getElementById("chatForm");
+const userInput = document.getElementById("userInput");
+const typingIndicator = document.getElementById("typingIndicator");
+const themeToggle = document.getElementById("themeToggle");
 
-  const chatContainer = document.getElementById("chatContainer");
-  const chatForm = document.getElementById("chatForm");
-  const userInput = document.getElementById("userInput");
-  const sendButton = document.getElementById("sendButton");
-  const typingIndicator = document.getElementById("typingIndicator");
+// ---------------------------------------------
+// THEME TOGGLE
+// ---------------------------------------------
+const THEME_KEY = "chatThemePref";
 
-  function scrollToBottom(smooth = true) {
-    if (!chatContainer) return;
-    const opts = { top: chatContainer.scrollHeight };
-    if (smooth) opts.behavior = "smooth";
-    chatContainer.scrollTo(opts);
+function applyTheme(theme) {
+  const nextTheme = theme === "light" ? "light" : "dark";
+  document.body.dataset.theme = nextTheme;
+  if (themeToggle) {
+    themeToggle.textContent = nextTheme === "dark" ? "Light mode" : "Dark mode";
+  }
+  try {
+    localStorage.setItem(THEME_KEY, nextTheme);
+  } catch (_) {
+    // if storage is unavailable we silently ignore
+  }
+}
+
+function initTheme() {
+  let stored = null;
+  try {
+    stored = localStorage.getItem(THEME_KEY);
+  } catch (_) {
+    stored = null;
   }
 
-  function setTyping(visible) {
-    if (!typingIndicator) return;
-    typingIndicator.classList.toggle("hidden", !visible);
-    if (visible) scrollToBottom(false);
+  if (stored) {
+    applyTheme(stored);
+    return;
   }
 
-  function appendMessage({ sender, text, html }) {
-    const row = document.createElement("div");
-    row.classList.add("message-row", sender === "user" ? "user" : "bot");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(prefersDark ? "dark" : "light");
+}
 
-    const bubble = document.createElement("div");
-    bubble.classList.add("message-bubble", sender === "user" ? "user" : "bot", "fade-in");
+if (themeToggle) {
+  themeToggle.addEventListener("click", () => {
+    const current = document.body.dataset.theme || "dark";
+    applyTheme(current === "dark" ? "light" : "dark");
+  });
+}
 
-    if (sender === "bot" && html) {
-      const wrapper = document.createElement("div");
-      wrapper.classList.add("bot-html-wrapper");
-      wrapper.innerHTML = html;
-      bubble.appendChild(wrapper);
-    } else {
-      bubble.textContent = text || "";
-    }
+initTheme();
 
-    row.appendChild(bubble);
-    chatContainer.appendChild(row);
-    scrollToBottom();
-  }
+// ---------------------------------------------
+// INITIAL GREETING (one-time)
+// ---------------------------------------------
+appendMessage(
+  `<p>Hi, I'm your Pinecone RAG assistant.</p>`,
+  "bot"
+);
 
-  async function sendToN8n(question) {
-    const payload = { question }; // matches tried-and-tested n8n workflow
+// ---------------------------------------------
+// ADD MESSAGE TO SCREEN
+// ---------------------------------------------
+function appendMessage(html, sender) {
+  const bubble = document.createElement("div");
+  bubble.classList.add("message");
 
-    const response = await fetch(n8nEndpoint, {
+  if (sender === "user") bubble.classList.add("user");
+  else bubble.classList.add("bot");
+
+  bubble.innerHTML = html;
+
+  chatContainer.appendChild(bubble);
+
+  // scroll to latest
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// ---------------------------------------------
+// TYPING INDICATOR
+// ---------------------------------------------
+function showThinking() {
+  typingIndicator.classList.remove("hidden");
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function hideThinking() {
+  typingIndicator.classList.add("hidden");
+}
+
+// ---------------------------------------------
+// SUBMIT HANDLER
+// ---------------------------------------------
+chatForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const text = userInput.value.trim();
+  if (!text) return;
+
+  // Add user message
+  appendMessage(text, "user");
+  userInput.value = "";
+
+  // Show thinking indicator
+  showThinking();
+
+  try {
+    const res = await fetch(N8N_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ question: text })   // *** REQUIRED FOR YOUR n8n WORKFLOW ***
     });
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      throw new Error(`HTTP ${response.status}: ${errorText || "Request failed"}`);
-    }
+    const html = await res.text();
 
-    return await response.text(); // n8n returns HTML
+    hideThinking();
+    appendMessage(html, "bot");
+
+  } catch (err) {
+    hideThinking();
+    appendMessage("<p>Error contacting n8n webhook.</p>", "bot");
   }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    const value = userInput.value.trim();
-    if (!value) return;
-
-    appendMessage({ sender: "user", text: value });
-    userInput.value = "";
-    autoResizeTextarea();
-
-    sendButton.disabled = true;
-    setTyping(true);
-
-    try {
-      const html = await sendToN8n(value);
-      setTyping(false);
-      appendMessage({ sender: "bot", html });
-    } catch (err) {
-      console.error("Error calling n8n:", err);
-      setTyping(false);
-      appendMessage({
-        sender: "bot",
-        text: "There was a problem contacting the n8n workflow. Check that n8n is running at http://localhost:5678."
-      });
-    } finally {
-      sendButton.disabled = false;
-      userInput.focus();
-    }
-  }
-
-  function autoResizeTextarea() {
-    if (!userInput) return;
-    userInput.style.height = "auto";
-    userInput.style.height = userInput.scrollHeight + "px";
-  }
-
-  chatForm.addEventListener("submit", handleSubmit);
-
-  userInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      chatForm.requestSubmit();
-    }
-  });
-
-  userInput.addEventListener("input", autoResizeTextarea);
-
-  autoResizeTextarea();
-  scrollToBottom(false);
 });
