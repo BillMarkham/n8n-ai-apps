@@ -2,8 +2,8 @@
     --body-bg: radial-gradient(circle at top, #241e49 0%, #0b0819 45%, #05030f 100%);
     --panel: rgba(18, 16, 34, 0.65);
     --panel-border: rgba(255, 255, 255, 0.08);
-    --accent: #9d7bff;
-    --accent-strong: #7b5bff;
+    --accent: #6fb1ff;
+    --accent-strong: #5e74ff;
     --text: #f5f3ff;
     --muted: rgba(245, 243, 255, 0.6);
     --card: rgba(255, 255, 255, 0.04);
@@ -145,33 +145,6 @@ body {
     justify-content: flex-end;
 }
 
-.bot-switcher {
-    display: inline-flex;
-    gap: 8px;
-    padding: 4px;
-    background: var(--card);
-    border-radius: 999px;
-    border: 1px solid var(--card-border);
-}
-
-.bot-chip {
-    border: none;
-    border-radius: 999px;
-    padding: 6px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-    background: transparent;
-    cursor: pointer;
-    transition: background 0.2s ease, color 0.2s ease;
-}
-
-.bot-chip.active {
-    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-    color: #fff;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-}
-
 .panel-greeting {
     font-size: 18px;
     color: var(--muted);
@@ -288,15 +261,8 @@ body {
     border-radius: 16px;
     padding: 10px;
     display: flex;
-    gap: 16px;
+    gap: 12px;
     border: 1px solid var(--input-border);
-    align-items: stretch;
-}
-
-.input-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
 }
 
 .input-row input {
@@ -324,19 +290,10 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: opacity 0.2s ease;
-    height: 42px;
 }
 
 .send-btn:hover {
     opacity: 0.9;
-}
-
-.new-thread-btn {
-    border-radius: 12px;
-    padding: 0 22px;
-    font-size: 15px;
-    font-weight: 600;
-    height: 42px;
 }
 
 @media (max-width: 1024px) {
@@ -366,21 +323,6 @@ body {
         width: 100%;
         flex-direction: column;
         align-items: stretch;
-    }
-
-    .bot-switcher {
-        width: 100%;
-        justify-content: space-between;
-        flex-wrap: wrap;
-    }
-
-    .bot-chip {
-        flex: 1;
-        text-align: center;
-    }
-
-    .message {
-        max-width: 100%;
     }
 }
 

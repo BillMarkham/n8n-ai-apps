@@ -13,12 +13,12 @@ const BOT_CONFIGS = [
   },
   {
     id: "sql-analyst",
-    label: "SQL Analyst",
-    description: "Coming soon - query company data via SQL workflows.",
-    placeholder: "Coming soon: ask SQL questions here.",
-    greeting: "Hi, I'm your SQL analyst assistant.",
-    typingText: "SQL analyst is thinking...",
-    webhook: "", // update when the SQL chatbot workflow is ready
+    label: "RAG with SQL",
+    description: "Ask anything about the indexed SQL workspace via n8n.",
+    placeholder: "Ask about KPIs, tables, or joins...",
+    greeting: "Hi, I'm your RAG with SQL assistant.",
+    typingText: "SQL assistant is thinking...",
+    webhook: "http://localhost:5678/webhook/chatsql",
   },
   {
     id: "automation",
@@ -33,7 +33,6 @@ const BOT_CONFIGS = [
 
 const STORAGE_KEYS = {
   theme: "chatThemePref",
-  conversations: "chatConversationsByBot",
   activeBot: "chatActiveBotId",
 };
 
@@ -80,34 +79,13 @@ function safeStorageSet(key, value) {
 }
 
 function persistConversations() {
-  const serializable = {};
-  conversationStore.forEach((messages, id) => {
-    serializable[id] = messages;
-  });
-
-  safeStorageSet(STORAGE_KEYS.conversations, JSON.stringify(serializable));
+  // chat histories stay in-memory only for the active session
 }
 
 function hydrateConversations() {
-  const raw = safeStorageGet(STORAGE_KEYS.conversations);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      Object.keys(parsed).forEach((id) => {
-        if (Array.isArray(parsed[id])) {
-          conversationStore.set(id, parsed[id]);
-        }
-      });
-    } catch (_) {
-      // if parsing fails we start fresh
-    }
-  }
-
   BOT_CONFIGS.forEach((bot) => {
     if (!conversationStore.has(bot.id)) {
       conversationStore.set(bot.id, []);
-    } else {
-      stripGreetingBubbles(bot.id);
     }
   });
 }
@@ -131,30 +109,8 @@ function ensureConversation(botId) {
   return conversationStore.get(botId);
 }
 
-function stripGreetingBubbles(botId) {
-  const bot = getBot(botId);
-  if (!bot?.greeting) return;
-  const greetingText = bot.greeting.trim();
-  if (!greetingText) return;
-
-  const conversation = ensureConversation(botId);
-  const filtered = conversation.filter((message) => {
-    if (message.sender !== "bot") return true;
-    const div = document.createElement("div");
-    div.innerHTML = message.html || "";
-    const text = (div.textContent || "").trim();
-    return text !== greetingText;
-  });
-
-  if (filtered.length !== conversation.length) {
-    conversationStore.set(botId, filtered);
-    persistConversations();
-  }
-}
-
 function resetConversation(botId) {
   conversationStore.set(botId, []);
-  persistConversations();
   if (botId === activeBotId) {
     renderConversation(botId);
   }
@@ -184,7 +140,6 @@ function renderConversation(botId) {
 function addMessageToConversation(botId, message) {
   const conversation = ensureConversation(botId);
   conversation.push(message);
-  persistConversations();
   if (botId === activeBotId) {
     renderConversation(botId);
   }
@@ -194,6 +149,35 @@ function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
   return div.innerHTML;
+}
+
+function plainTextToHtml(text = "") {
+  return escapeHtml(text).replace(/\n/g, "<br />");
+}
+
+function normalizeBotPayload(raw) {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+
+  const looksHtml = trimmed.startsWith("<") && trimmed.endsWith(">");
+  if (looksHtml) return trimmed;
+
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const candidate =
+        (parsed && (parsed.html || parsed.output || parsed.answer || parsed.result)) || "";
+      if (typeof candidate === "string" && candidate.trim()) {
+        const cleaned = candidate.trim();
+        return cleaned.startsWith("<") ? cleaned : plainTextToHtml(cleaned);
+      }
+    } catch (_) {
+      // fall through to plain text handling
+    }
+  }
+
+  return plainTextToHtml(trimmed);
 }
 
 // ---------------------------------------------
@@ -339,10 +323,11 @@ if (chatForm) {
       });
 
       const html = await res.text();
+      const normalized = normalizeBotPayload(html);
       hideThinking();
       addMessageToConversation(bot.id, {
         sender: "bot",
-        html: html || "<p>Your workflow returned an empty response.</p>",
+        html: normalized || "<p>Your workflow returned an empty response.</p>",
       });
     } catch (err) {
       hideThinking();

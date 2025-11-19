@@ -29,7 +29,6 @@
                     </div>
                     <div class="panel-controls">
                         <div id="botSwitcher" class="bot-switcher" role="tablist" aria-label="Select an assistant"></div>
-                        <button id="newThreadBtn" class="ghost-btn" type="button">New Thread</button>
                     </div>
                 </div>
 
@@ -43,7 +42,12 @@
                         placeholder="Enter your query here."
                         autocomplete="off"
                     />
-                    <button type="submit" class="send-btn">Send</button>
+                    <div class="input-actions">
+                        <button type="submit" class="send-btn">Send</button>
+                        <button id="newThreadBtn" class="ghost-btn ghost-small new-thread-btn" type="button">
+                            New Thread
+                        </button>
+                    </div>
                 </form>
             </section>
         </div>
