@@ -23,10 +23,14 @@
         <div class="layout">
             <section class="chat-panel">
                 <div class="panel-header">
-                    <div>
-                        <p class="panel-greeting">Hi, I'm your Pinecone RAG assistant.</p>
+                    <div class="panel-intro">
+                        <p class="panel-greeting" id="panelGreeting">Hi, I'm your Pinecone RAG assistant.</p>
+                        <p class="panel-subtitle" id="panelSubtitle"></p>
                     </div>
-                    <button class="ghost-btn" type="button">New Thread</button>
+                    <div class="panel-controls">
+                        <div id="botSwitcher" class="bot-switcher" role="tablist" aria-label="Select an assistant"></div>
+                        <button id="newThreadBtn" class="ghost-btn" type="button">New Thread</button>
+                    </div>
                 </div>
 
                 <main id="chatContainer" class="chat-thread"></main>

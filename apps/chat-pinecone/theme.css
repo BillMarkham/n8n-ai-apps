@@ -126,6 +126,52 @@ body {
     margin-bottom: 20px;
 }
 
+.panel-intro {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.panel-subtitle {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.panel-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.bot-switcher {
+    display: inline-flex;
+    gap: 8px;
+    padding: 4px;
+    background: var(--card);
+    border-radius: 999px;
+    border: 1px solid var(--card-border);
+}
+
+.bot-chip {
+    border: none;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.bot-chip.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
 .panel-greeting {
     font-size: 18px;
     color: var(--muted);
@@ -298,6 +344,23 @@ body {
         flex-direction: column;
         gap: 12px;
         align-items: flex-start;
+    }
+
+    .panel-controls {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .bot-switcher {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .bot-chip {
+        flex: 1;
+        text-align: center;
     }
 
     .message {
