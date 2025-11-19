@@ -11,6 +11,7 @@ const chatForm = document.getElementById("chatForm");
 const userInput = document.getElementById("userInput");
 const typingIndicator = document.getElementById("typingIndicator");
 const themeToggle = document.getElementById("themeToggle");
+const DEFAULT_GREETING = "Hi, I'm your Pinecone RAG assistant.";
 
 // ---------------------------------------------
 // THEME TOGGLE
@@ -56,18 +57,22 @@ if (themeToggle) {
 
 initTheme();
 
-// ---------------------------------------------
-// INITIAL GREETING (one-time)
-// ---------------------------------------------
-appendMessage(
-  `<p>Hi, I'm your Pinecone RAG assistant.</p>`,
-  "bot"
-);
+function removeIntroGreetingBubble() {
+  if (!chatContainer) return;
+  const introNodes = chatContainer.querySelectorAll(".message");
+  introNodes.forEach((node) => {
+    if (node.textContent.trim() === DEFAULT_GREETING) {
+      node.remove();
+    }
+  });
+}
+
+removeIntroGreetingBubble();
 
 // ---------------------------------------------
 // ADD MESSAGE TO SCREEN
 // ---------------------------------------------
-function appendMessage(html, sender) {
+function appendMessage(html, sender, autoScroll = true) {
   const bubble = document.createElement("div");
   bubble.classList.add("message");
 
@@ -78,8 +83,10 @@ function appendMessage(html, sender) {
 
   chatContainer.appendChild(bubble);
 
-  // scroll to latest
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  if (autoScroll) {
+    // scroll to latest
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
 }
 
 // ---------------------------------------------

@@ -66,9 +66,18 @@ body {
     border-radius: 24px;
     padding: 28px 32px;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
     backdrop-filter: blur(16px);
+}
+
+.brand-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
 .brand-stack h1 {
@@ -90,50 +99,21 @@ body {
 }
 
 .top-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.status-pill {
-    padding: 10px 16px;
-    border-radius: 999px;
-    border: 1px solid var(--status-border);
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: var(--text);
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.status-dot.online {
-    background: #5ffa9b;
-    box-shadow: 0 0 8px rgba(95, 250, 155, 0.8);
+    position: absolute;
+    top: 28px;
+    right: 32px;
 }
 
 .layout {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 24px;
+    display: block;
 }
 
-.chat-panel,
-.info-panel {
+.chat-panel {
     background: var(--panel);
     border: 1px solid var(--panel-border);
     border-radius: 24px;
     padding: 28px;
     backdrop-filter: blur(16px);
-}
-
-.chat-panel {
     display: flex;
     flex-direction: column;
     min-height: 620px;
@@ -146,9 +126,10 @@ body {
     margin-bottom: 20px;
 }
 
-.panel-header h2 {
-    font-size: 24px;
-    margin-top: 6px;
+.panel-greeting {
+    font-size: 18px;
+    color: var(--muted);
+    margin: 0;
 }
 
 .ghost-btn {
@@ -248,6 +229,7 @@ body {
     margin: 6px 0 16px;
     font-size: 14px;
     color: var(--muted);
+    animation: thinkingPulse 2s ease-in-out infinite;
 }
 
 .hidden {
@@ -295,76 +277,21 @@ body {
     opacity: 0.9;
 }
 
-.info-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.panel-card {
-    background: var(--card);
-    border-radius: 18px;
-    border: 1px solid var(--card-border);
-    padding: 20px;
-}
-
-.panel-card h3 {
-    margin-top: 8px;
-}
-
-.panel-text {
-    color: var(--muted);
-    margin-top: 10px;
-    line-height: 1.5;
-}
-
-.pill-list {
-    list-style: none;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 14px;
-}
-
-.pill-list li {
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 999px;
-    padding: 6px 14px;
-    font-size: 13px;
-}
-
-.tips {
-    list-style: disc;
-    margin-left: 18px;
-    margin-top: 10px;
-    color: var(--muted);
-    line-height: 1.5;
-}
-
 @media (max-width: 1024px) {
     body {
         padding: 16px;
-    }
-
-    .layout {
-        grid-template-columns: 1fr;
-    }
-
-    .info-panel {
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-
-    .panel-card {
-        flex: 1 1 260px;
     }
 }
 
 @media (max-width: 640px) {
     .top-bar,
-    .chat-panel,
-    .info-panel {
+    .chat-panel {
         padding: 20px;
+    }
+
+    .top-actions {
+        top: 20px;
+        right: 20px;
     }
 
     .panel-header {
@@ -375,5 +302,20 @@ body {
 
     .message {
         max-width: 100%;
+    }
+}
+
+@keyframes thinkingPulse {
+    0% {
+        opacity: 0.65;
+        letter-spacing: 0.04em;
+    }
+    50% {
+        opacity: 0.95;
+        letter-spacing: 0.08em;
+    }
+    100% {
+        opacity: 0.65;
+        letter-spacing: 0.04em;
     }
 }
