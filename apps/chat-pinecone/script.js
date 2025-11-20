@@ -21,13 +21,13 @@ const BOT_CONFIGS = [
     webhook: "http://localhost:5678/webhook/chatsql",
   },
   {
-    id: "automation",
-    label: "Automation Copilot",
-    description: "Coming soon - orchestrate HTML + automation workflows.",
-    placeholder: "Coming soon: describe an automation you'd like.",
-    greeting: "Hi, I'm your automation copilot.",
-    typingText: "Automation copilot is thinking...",
-    webhook: "", // update when the automation chatbot workflow is ready
+    id: "chat-html",
+    label: "Chat html",
+    description: "Send prompts to the Chat html workflow via n8n.",
+    placeholder: "Ask for HTML snippets or content to generate...",
+    greeting: "Hi, I'm your Chat html assistant.",
+    typingText: "Chat html assistant is thinking...",
+    webhook: "https://c2a23186d2fa.ngrok-free.app/webhook/chathtml",
   },
 ];
 
@@ -58,6 +58,7 @@ const newThreadBtn = document.getElementById("newThreadBtn");
 const conversationStore = new Map();
 const botChips = new Map();
 let activeBotId = null;
+const pendingBots = new Set();
 
 // ---------------------------------------------
 // STORAGE HELPERS
@@ -113,6 +114,8 @@ function resetConversation(botId) {
   conversationStore.set(botId, []);
   if (botId === activeBotId) {
     renderConversation(botId);
+    pendingBots.delete(botId);
+    updateThinkingIndicator();
   }
 }
 
@@ -269,23 +272,38 @@ function setActiveBot(botId) {
   }
 
   renderConversation(bot.id);
+  updateThinkingIndicator();
 }
 
 // ---------------------------------------------
 // TYPING INDICATOR
 // ---------------------------------------------
-function showThinking(bot = getActiveBot()) {
-  if (!typingIndicator) return;
-  typingIndicator.textContent = bot?.typingText || FALLBACK_TYPING;
-  typingIndicator.classList.remove("hidden");
-  if (chatContainer) {
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+function updateThinkingIndicator() {
+  const bot = getActiveBot();
+  if (!typingIndicator || !bot) return;
+
+  const isPending = pendingBots.has(bot.id);
+  if (isPending) {
+    typingIndicator.textContent = bot.typingText || FALLBACK_TYPING;
+    typingIndicator.classList.remove("hidden");
+    if (chatContainer) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  } else {
+    typingIndicator.classList.add("hidden");
   }
 }
 
-function hideThinking() {
-  if (!typingIndicator) return;
-  typingIndicator.classList.add("hidden");
+function showThinking(bot = getActiveBot()) {
+  if (!bot) return;
+  pendingBots.add(bot.id);
+  updateThinkingIndicator();
+}
+
+function hideThinking(bot = getActiveBot()) {
+  if (!bot) return;
+  pendingBots.delete(bot.id);
+  updateThinkingIndicator();
 }
 
 // ---------------------------------------------
@@ -307,7 +325,7 @@ if (chatForm) {
     showThinking(bot);
 
     if (!bot.webhook) {
-      hideThinking();
+      hideThinking(bot);
       addMessageToConversation(bot.id, {
         sender: "bot",
         html: `<p>This assistant is not connected to an n8n workflow yet. Update <code>BOT_CONFIGS</code> with the webhook URL when it's ready.</p>`,
@@ -324,13 +342,13 @@ if (chatForm) {
 
       const html = await res.text();
       const normalized = normalizeBotPayload(html);
-      hideThinking();
+      hideThinking(bot);
       addMessageToConversation(bot.id, {
         sender: "bot",
         html: normalized || "<p>Your workflow returned an empty response.</p>",
       });
     } catch (err) {
-      hideThinking();
+      hideThinking(bot);
       addMessageToConversation(bot.id, {
         sender: "bot",
         html: "<p>Error contacting the configured n8n webhook.</p>",
