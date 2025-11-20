@@ -1,12 +1,14 @@
 // ---------------------------------------------
 // CONFIGURATION
 // ---------------------------------------------
+const N8N_WEBHOOK = "https://c2a23186d2fa.ngrok-free.app/webhook/chathtml"; // POST JSON { question }
+
 const CONFIG = {
   title: "Chat html",
   description: "Send prompts to the Chat html workflow and render the returned HTML.",
   placeholder: "Ask for HTML snippets or content to generate...",
   typingText: "Chat html assistant is thinking...",
-  webhook: "https://c2a23186d2fa.ngrok-free.app/webhook/chathtml",
+  webhook: N8N_WEBHOOK,
 };
 
 const STORAGE_KEYS = {
@@ -152,6 +154,12 @@ function hideThinking() {
   if (!typingIndicator) return;
   typingIndicator.classList.add("hidden");
 }
+
+// ---------------------------------------------
+// SMOKE-TEST NOTE
+// ---------------------------------------------
+// To smoke test the workflow directly, POST JSON like { question: "hello" }
+// to N8N_WEBHOOK. The UI uses the same endpoint.
 
 // ---------------------------------------------
 // ACTIONS

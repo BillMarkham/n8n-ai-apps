@@ -1,6 +1,13 @@
 // ---------------------------------------------
 // SHARED CONFIG
 // ---------------------------------------------
+// Expected webhook endpoints for smoke tests / configuration
+const N8N_WEBHOOKS = {
+  pinecone: "http://localhost:5678/webhook/chatpine",
+  sql: "http://localhost:5678/webhook/chatsql",
+  chatHtml: "https://c2a23186d2fa.ngrok-free.app/webhook/chathtml",
+};
+
 const BOT_CONFIGS = [
   {
     id: "pinecone",
@@ -9,7 +16,7 @@ const BOT_CONFIGS = [
     placeholder: "Ask something about the Pinecone documents...",
     greeting: "Hi, I'm your Pinecone RAG assistant.",
     typingText: "Pinecone assistant is thinking...",
-    webhook: "http://localhost:5678/webhook/chatpine",
+    webhook: N8N_WEBHOOKS.pinecone,
   },
   {
     id: "sql-analyst",
@@ -18,7 +25,7 @@ const BOT_CONFIGS = [
     placeholder: "Ask about KPIs, tables, or joins...",
     greeting: "Hi, I'm your RAG with SQL assistant.",
     typingText: "SQL assistant is thinking...",
-    webhook: "http://localhost:5678/webhook/chatsql",
+    webhook: N8N_WEBHOOKS.sql,
   },
   {
     id: "chat-html",
@@ -27,7 +34,7 @@ const BOT_CONFIGS = [
     placeholder: "Ask for HTML snippets or content to generate...",
     greeting: "Hi, I'm your Chat html assistant.",
     typingText: "Chat html assistant is thinking...",
-    webhook: "https://c2a23186d2fa.ngrok-free.app/webhook/chathtml",
+    webhook: N8N_WEBHOOKS.chatHtml,
   },
 ];
 
@@ -47,6 +54,7 @@ const chatForm = document.getElementById("chatForm");
 const userInput = document.getElementById("userInput");
 const typingIndicator = document.getElementById("typingIndicator");
 const themeToggle = document.getElementById("themeToggle");
+const sendButton = chatForm?.querySelector('button[type="submit"]');
 const panelGreeting = document.getElementById("panelGreeting");
 const panelSubtitle = document.getElementById("panelSubtitle");
 const botSwitcher = document.getElementById("botSwitcher");
@@ -116,6 +124,7 @@ function resetConversation(botId) {
     renderConversation(botId);
     pendingBots.delete(botId);
     updateThinkingIndicator();
+    updateActionState();
   }
 }
 
@@ -182,6 +191,12 @@ function normalizeBotPayload(raw) {
 
   return plainTextToHtml(trimmed);
 }
+
+// ---------------------------------------------
+// SMOKE-TEST NOTE
+// ---------------------------------------------
+// To smoke test each workflow, POST JSON like { question: "hello" }
+// to the matching URL in N8N_WEBHOOKS. The UI uses the same endpoints.
 
 // ---------------------------------------------
 // THEME TOGGLE
@@ -273,6 +288,18 @@ function setActiveBot(botId) {
 
   renderConversation(bot.id);
   updateThinkingIndicator();
+  updateActionState();
+}
+
+// ---------------------------------------------
+// ACTION STATE
+// ---------------------------------------------
+function updateActionState() {
+  const bot = getActiveBot();
+  const isPending = bot ? pendingBots.has(bot.id) : false;
+  if (sendButton) {
+    sendButton.disabled = isPending;
+  }
 }
 
 // ---------------------------------------------
@@ -298,12 +325,14 @@ function showThinking(bot = getActiveBot()) {
   if (!bot) return;
   pendingBots.add(bot.id);
   updateThinkingIndicator();
+  updateActionState();
 }
 
 function hideThinking(bot = getActiveBot()) {
   if (!bot) return;
   pendingBots.delete(bot.id);
   updateThinkingIndicator();
+  updateActionState();
 }
 
 // ---------------------------------------------
