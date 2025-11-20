@@ -283,7 +283,7 @@ body {
 }
 
 .input-row {
-    margin-top: 12px;
+    margin-top: 0;
     background: var(--input-bg);
     border-radius: 16px;
     padding: 10px;
@@ -291,12 +291,15 @@ body {
     gap: 16px;
     border: 1px solid var(--input-border);
     align-items: stretch;
+    flex: 1;
 }
 
-.input-actions {
+.input-area {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
+    margin-top: 12px;
+    flex-wrap: nowrap;
 }
 
 .input-row input {
@@ -335,8 +338,9 @@ body {
     border-radius: 12px;
     padding: 0 22px;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 500;
     height: 42px;
+    white-space: nowrap;
 }
 
 @media (max-width: 1024px) {
