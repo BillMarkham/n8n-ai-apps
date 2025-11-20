@@ -35,20 +35,20 @@
                 <main id="chatContainer" class="chat-thread"></main>
                 <div id="typingIndicator" class="typing-indicator hidden">n8n is thinking...</div>
 
-                <form id="chatForm" class="input-row">
-                    <input
-                        id="userInput"
-                        type="text"
-                        placeholder="Enter your query here."
-                        autocomplete="off"
-                    />
-                    <div class="input-actions">
+                <div class="input-area">
+                    <form id="chatForm" class="input-row">
+                        <input
+                            id="userInput"
+                            type="text"
+                            placeholder="Enter your query here."
+                            autocomplete="off"
+                        />
                         <button type="submit" class="send-btn">Send</button>
-                        <button id="newThreadBtn" class="ghost-btn ghost-small new-thread-btn" type="button">
-                            New Thread
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                    <button id="newThreadBtn" class="ghost-btn ghost-small new-thread-btn" type="button">
+                        New Thread
+                    </button>
+                </div>
             </section>
         </div>
     </div>
