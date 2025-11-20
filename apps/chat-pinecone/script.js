@@ -45,6 +45,13 @@ const STORAGE_KEYS = {
 
 const FALLBACK_PLACEHOLDER = "Enter your query here.";
 const FALLBACK_TYPING = "n8n is thinking...";
+const COPY = {
+  emptyBotReply: "<p>Your workflow returned an empty response.</p>",
+  webhookError: "<p>Error contacting the configured n8n webhook.</p>",
+  disconnected:
+    "<p>This assistant is not connected to an n8n workflow yet. Update <code>BOT_CONFIGS</code> with the webhook URL when it's ready.</p>",
+};
+const BOT_PAYLOAD_FIELDS = ["html", "output", "answer", "result"];
 
 // ---------------------------------------------
 // DOM ELEMENTS
@@ -139,14 +146,18 @@ function createBubble({ html, sender }) {
   return bubble;
 }
 
+function scrollChatToBottom() {
+  if (!chatContainer) return;
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
 function renderConversation(botId) {
   if (!chatContainer) return;
   const conversation = ensureConversation(botId);
-  chatContainer.innerHTML = "";
-  conversation.forEach((message) => {
-    chatContainer.appendChild(createBubble(message));
-  });
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  const fragment = document.createDocumentFragment();
+  conversation.forEach((message) => fragment.appendChild(createBubble(message)));
+  chatContainer.replaceChildren(fragment);
+  scrollChatToBottom();
 }
 
 function addMessageToConversation(botId, message) {
@@ -167,6 +178,22 @@ function plainTextToHtml(text = "") {
   return escapeHtml(text).replace(/\n/g, "<br />");
 }
 
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim();
+}
+
+function firstPresentField(obj, fields) {
+  return fields.map((field) => obj?.[field]).find(isNonEmptyString) || "";
+}
+
+function safeJsonParse(raw) {
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
 function normalizeBotPayload(raw) {
   if (!raw) return "";
   const trimmed = raw.trim();
@@ -176,16 +203,11 @@ function normalizeBotPayload(raw) {
   if (looksHtml) return trimmed;
 
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      const candidate =
-        (parsed && (parsed.html || parsed.output || parsed.answer || parsed.result)) || "";
-      if (typeof candidate === "string" && candidate.trim()) {
-        const cleaned = candidate.trim();
-        return cleaned.startsWith("<") ? cleaned : plainTextToHtml(cleaned);
-      }
-    } catch (_) {
-      // fall through to plain text handling
+    const parsed = safeJsonParse(trimmed);
+    const candidate = firstPresentField(parsed, BOT_PAYLOAD_FIELDS);
+    if (isNonEmptyString(candidate)) {
+      const cleaned = candidate.trim();
+      return cleaned.startsWith("<") ? cleaned : plainTextToHtml(cleaned);
     }
   }
 
@@ -313,9 +335,7 @@ function updateThinkingIndicator() {
   if (isPending) {
     typingIndicator.textContent = bot.typingText || FALLBACK_TYPING;
     typingIndicator.classList.remove("hidden");
-    if (chatContainer) {
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
+    scrollChatToBottom();
   } else {
     typingIndicator.classList.add("hidden");
   }
@@ -349,16 +369,16 @@ if (chatForm) {
     if (!text) return;
 
     addMessageToConversation(bot.id, { sender: "user", html: escapeHtml(text) });
-    if (userInput) userInput.value = "";
+    clearAndFocusInput();
 
     showThinking(bot);
 
     if (!bot.webhook) {
-      hideThinking(bot);
       addMessageToConversation(bot.id, {
         sender: "bot",
-        html: `<p>This assistant is not connected to an n8n workflow yet. Update <code>BOT_CONFIGS</code> with the webhook URL when it's ready.</p>`,
+        html: COPY.disconnected,
       });
+      hideThinking(bot);
       return;
     }
 
@@ -369,19 +389,24 @@ if (chatForm) {
         body: JSON.stringify({ question: text, botId: bot.id }),
       });
 
-      const html = await res.text();
-      const normalized = normalizeBotPayload(html);
-      hideThinking(bot);
+      if (!res.ok) {
+        throw new Error(`Webhook returned ${res.status}`);
+      }
+
+      const bodyText = await res.text();
+      const normalized = normalizeBotPayload(bodyText);
       addMessageToConversation(bot.id, {
         sender: "bot",
-        html: normalized || "<p>Your workflow returned an empty response.</p>",
+        html: normalized || COPY.emptyBotReply,
       });
     } catch (err) {
-      hideThinking(bot);
+      console.error(err);
       addMessageToConversation(bot.id, {
         sender: "bot",
-        html: "<p>Error contacting the configured n8n webhook.</p>",
+        html: COPY.webhookError,
       });
+    } finally {
+      hideThinking(bot);
     }
   });
 }
@@ -393,10 +418,14 @@ if (newThreadBtn) {
   newThreadBtn.addEventListener("click", () => {
     if (!activeBotId) return;
     resetConversation(activeBotId);
-    if (userInput) {
-      userInput.focus();
-    }
+    clearAndFocusInput();
   });
+}
+
+function clearAndFocusInput() {
+  if (!userInput) return;
+  userInput.value = "";
+  userInput.focus();
 }
 
 // ---------------------------------------------

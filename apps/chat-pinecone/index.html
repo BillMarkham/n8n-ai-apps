@@ -1,59 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>n8n RAG with Pinecone</title>
-    <link rel="stylesheet" href="theme.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>n8n RAG with Pinecone</title>
+  <link rel="stylesheet" href="theme.css" />
 </head>
 
 <body data-theme="dark">
-    <div class="app-shell">
-        <nav class="top-bar">
-            <div class="brand-stack">
-                <span class="eyebrow">n8n + Pinecone</span>
-                <h1>Research Copilot</h1>
-                <p class="lead">Ask anything about the indexed Pinecone workspace.</p>
-            </div>
+  <div class="app-shell">
+    <nav class="top-bar">
+      <div class="brand-stack">
+        <span class="eyebrow">n8n + Pinecone</span>
+        <h1>Research Copilot</h1>
+        <p class="lead">Ask anything about the indexed Pinecone workspace.</p>
+      </div>
 
-            <div class="top-actions">
-                <button id="themeToggle" type="button" class="ghost-btn ghost-small">Light mode</button>
-            </div>
-        </nav>
+      <div class="top-actions">
+        <button id="themeToggle" type="button" class="ghost-btn ghost-small">Light mode</button>
+      </div>
+    </nav>
 
-        <div class="layout">
-            <section class="chat-panel">
-                <div class="panel-header">
-                    <div class="panel-intro">
-                        <p class="panel-greeting" id="panelGreeting">Hi, I'm your Pinecone RAG assistant.</p>
-                        <p class="panel-subtitle" id="panelSubtitle"></p>
-                    </div>
-                    <div class="panel-controls">
-                        <div id="botSwitcher" class="bot-switcher" role="tablist" aria-label="Select an assistant"></div>
-                    </div>
-                </div>
-
-                <main id="chatContainer" class="chat-thread"></main>
-                <div id="typingIndicator" class="typing-indicator hidden">n8n is thinking...</div>
-
-                <div class="input-area">
-                    <form id="chatForm" class="input-row">
-                        <input
-                            id="userInput"
-                            type="text"
-                            placeholder="Enter your query here."
-                            autocomplete="off"
-                        />
-                        <button type="submit" class="send-btn">Send</button>
-                    </form>
-                    <button id="newThreadBtn" class="ghost-btn ghost-small new-thread-btn" type="button">
-                        New Thread
-                    </button>
-                </div>
-            </section>
+    <div class="layout">
+      <section class="chat-panel">
+        <div class="panel-header">
+          <div class="panel-intro">
+            <p class="panel-greeting" id="panelGreeting">Hi, I'm your Pinecone RAG assistant.</p>
+            <p class="panel-subtitle" id="panelSubtitle"></p>
+          </div>
+          <div class="panel-controls">
+            <div id="botSwitcher" class="bot-switcher" role="tablist" aria-label="Select an assistant"></div>
+          </div>
         </div>
-    </div>
 
-    <script src="script.js"></script>
+        <main id="chatContainer" class="chat-thread" aria-live="polite"></main>
+        <div id="typingIndicator" class="typing-indicator hidden" aria-live="assertive">n8n is thinking...</div>
+
+        <div class="input-area">
+          <form id="chatForm" class="input-row">
+            <input
+              id="userInput"
+              type="text"
+              placeholder="Enter your query here."
+              autocomplete="off"
+            />
+            <button type="submit" class="send-btn">Send</button>
+          </form>
+          <button id="newThreadBtn" class="ghost-btn ghost-small new-thread-btn" type="button">
+            New Thread
+          </button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
 

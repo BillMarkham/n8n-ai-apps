@@ -15,6 +15,13 @@ const STORAGE_KEYS = {
   theme: "chatHtmlThemePref",
 };
 
+const COPY = {
+  emptyBotReply: "<p>Your Chat html workflow returned an empty response.</p>",
+  webhookError: "<p>Error contacting the Chat html webhook. Confirm n8n is running.</p>",
+};
+
+const BOT_PAYLOAD_FIELDS = ["html", "output", "answer", "result"];
+
 // ---------------------------------------------
 // DOM ELEMENTS
 // ---------------------------------------------
@@ -62,11 +69,17 @@ function createBubble({ sender, html }) {
   return bubble;
 }
 
+function scrollChatToBottom() {
+  if (!chatContainer) return;
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
 function renderConversation() {
   if (!chatContainer) return;
-  chatContainer.innerHTML = "";
-  conversation.forEach((message) => chatContainer.appendChild(createBubble(message)));
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  const fragment = document.createDocumentFragment();
+  conversation.forEach((message) => fragment.appendChild(createBubble(message)));
+  chatContainer.replaceChildren(fragment);
+  scrollChatToBottom();
 }
 
 function addMessage(message) {
@@ -84,6 +97,14 @@ function plainTextToHtml(text = "") {
   return escapeHtml(text).replace(/\n/g, "<br />");
 }
 
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim();
+}
+
+function firstPresentField(obj, fields) {
+  return fields.map((field) => obj?.[field]).find(isNonEmptyString) || "";
+}
+
 function normalizeBotPayload(raw) {
   if (!raw) return "";
   const trimmed = raw.trim();
@@ -93,21 +114,22 @@ function normalizeBotPayload(raw) {
   if (maybeHtml) return trimmed;
 
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      const candidate =
-        (parsed && (parsed.html || parsed.output || parsed.answer || parsed.result)) || "";
-      if (typeof candidate === "string" && candidate.trim()) {
-        return candidate.trim().startsWith("<")
-          ? candidate
-          : plainTextToHtml(candidate);
-      }
-    } catch (_) {
-      // fall through to plain-text conversion
+    const parsed = safeJsonParse(trimmed);
+    const candidate = firstPresentField(parsed, BOT_PAYLOAD_FIELDS);
+    if (isNonEmptyString(candidate)) {
+      return candidate.trim().startsWith("<") ? candidate : plainTextToHtml(candidate);
     }
   }
 
   return plainTextToHtml(trimmed);
+}
+
+function safeJsonParse(raw) {
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
 }
 
 // ---------------------------------------------
@@ -147,7 +169,7 @@ function showThinking() {
   if (!typingIndicator) return;
   typingIndicator.textContent = CONFIG.typingText;
   typingIndicator.classList.remove("hidden");
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  scrollChatToBottom();
 }
 
 function hideThinking() {
@@ -167,10 +189,13 @@ function hideThinking() {
 function resetConversation() {
   conversation = [];
   renderConversation();
-  if (userInput) {
-    userInput.value = "";
-    userInput.focus();
-  }
+  clearAndFocusInput();
+}
+
+function clearAndFocusInput() {
+  if (!userInput) return;
+  userInput.value = "";
+  userInput.focus();
 }
 
 async function sendPrompt(prompt) {
@@ -183,19 +208,24 @@ async function sendPrompt(prompt) {
       body: JSON.stringify({ question: prompt }),
     });
 
-    const html = await res.text();
-    const normalized = normalizeBotPayload(html);
-    hideThinking();
+    if (!res.ok) {
+      throw new Error(`Webhook returned ${res.status}`);
+    }
+
+    const responseText = await res.text();
+    const normalized = normalizeBotPayload(responseText);
     addMessage({
       sender: "bot",
-      html: normalized || "<p>Your Chat html workflow returned an empty response.</p>",
+      html: normalized || COPY.emptyBotReply,
     });
   } catch (err) {
-    hideThinking();
+    console.error(err);
     addMessage({
       sender: "bot",
-      html: "<p>Error contacting the Chat html webhook. Confirm n8n is running.</p>",
+      html: COPY.webhookError,
     });
+  } finally {
+    hideThinking();
   }
 }
 
@@ -209,7 +239,7 @@ if (chatForm) {
     if (!prompt) return;
 
     addMessage({ sender: "user", html: escapeHtml(prompt) });
-    if (userInput) userInput.value = "";
+    clearAndFocusInput();
     sendPrompt(prompt);
   });
 }
