@@ -172,7 +172,8 @@ async function sendPrompt(prompt) {
     const res = await fetch(CONFIG.webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: prompt }),
+      // n8n expects chatInput in the body (matches chat-html contract)
+      body: JSON.stringify({ chatInput: prompt }),
     });
 
     const html = await res.text();

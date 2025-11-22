@@ -1,12 +1,25 @@
 // ---------------------------------------------
 // SHARED CONFIG
 // ---------------------------------------------
-// Expected webhook endpoints for smoke tests / configuration
-const N8N_WEBHOOKS = {
-  pinecone: "http://localhost:5678/webhook/chatpine",
-  sql: "http://localhost:5678/webhook/chatsql",
-  chatHtml: "https://c2a23186d2fa.ngrok-free.app/webhook/chathtml",
-};
+// Supabase edge function endpoint that proxies to the n8n webhooks.
+// Override via window.CHAT_ROUTER_URL to point at your hosted function.
+const CHAT_ROUTER_URL =
+  window.CHAT_ROUTER_URL || "http://localhost:54321/functions/v1/chat-router";
+
+// Optional: reuse an existing Supabase client on the page.
+// If not provided, we'll try to create one with the public anon key below when the
+// UMD bundle is available on window.supabase.
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
+const SUPABASE_CLIENT =
+  window.supabaseClient ||
+  (window.supabase?.auth?.getSession
+    ? window.supabase
+    : window.supabase?.createClient && SUPABASE_URL && SUPABASE_ANON_KEY
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null);
+const SUPABASE_REDIRECT_URL =
+  window.SUPABASE_REDIRECT_URL || "http://localhost:52966";
 
 const BOT_CONFIGS = [
   {
@@ -16,7 +29,7 @@ const BOT_CONFIGS = [
     placeholder: "Ask something about the Pinecone documents...",
     greeting: "Hi, I'm your Pinecone RAG assistant.",
     typingText: "Pinecone assistant is thinking...",
-    webhook: N8N_WEBHOOKS.pinecone,
+    webhook: CHAT_ROUTER_URL,
   },
   {
     id: "sql-analyst",
@@ -25,7 +38,7 @@ const BOT_CONFIGS = [
     placeholder: "Ask about KPIs, tables, or joins...",
     greeting: "Hi, I'm your RAG with SQL assistant.",
     typingText: "SQL assistant is thinking...",
-    webhook: N8N_WEBHOOKS.sql,
+    webhook: CHAT_ROUTER_URL,
   },
   {
     id: "chat-html",
@@ -34,7 +47,7 @@ const BOT_CONFIGS = [
     placeholder: "Ask for HTML snippets or content to generate...",
     greeting: "Hi, I'm your Chat html assistant.",
     typingText: "Chat html assistant is thinking...",
-    webhook: N8N_WEBHOOKS.chatHtml,
+    webhook: CHAT_ROUTER_URL,
   },
 ];
 
@@ -50,6 +63,7 @@ const COPY = {
   webhookError: "<p>Error contacting the configured n8n webhook.</p>",
   disconnected:
     "<p>This assistant is not connected to an n8n workflow yet. Update <code>BOT_CONFIGS</code> with the webhook URL when it's ready.</p>",
+  missingAuth: "<p>Sign in to Supabase to continue.</p>",
 };
 const BOT_PAYLOAD_FIELDS = ["html", "output", "answer", "result"];
 
@@ -66,6 +80,10 @@ const panelGreeting = document.getElementById("panelGreeting");
 const panelSubtitle = document.getElementById("panelSubtitle");
 const botSwitcher = document.getElementById("botSwitcher");
 const newThreadBtn = document.getElementById("newThreadBtn");
+const authEmailInput = document.getElementById("authEmail");
+const magicLinkBtn = document.getElementById("magicLinkBtn");
+const signOutBtn = document.getElementById("signOutBtn");
+const authStatus = document.getElementById("authStatus");
 
 // ---------------------------------------------
 // STATE
@@ -214,11 +232,102 @@ function normalizeBotPayload(raw) {
   return plainTextToHtml(trimmed);
 }
 
+async function getSupabaseAccessToken() {
+  if (!SUPABASE_CLIENT?.auth?.getSession) return "";
+  const { data, error } = await SUPABASE_CLIENT.auth.getSession();
+  if (error) {
+    console.error("Supabase session error", error);
+    return "";
+  }
+  return data?.session?.access_token || "";
+}
+
+function setAuthStatus(text) {
+  if (authStatus) {
+    authStatus.textContent = text;
+  }
+}
+
+function setAuthControls({ disableInputs = false, disableSignOut = false } = {}) {
+  if (authEmailInput) authEmailInput.disabled = disableInputs;
+  if (magicLinkBtn) magicLinkBtn.disabled = disableInputs;
+  if (signOutBtn) signOutBtn.disabled = disableSignOut;
+}
+
+function renderAuthState(session) {
+  if (!SUPABASE_CLIENT) {
+    setAuthStatus("Supabase client not configured.");
+    setAuthControls({ disableInputs: true, disableSignOut: true });
+    return;
+  }
+
+  if (session?.user) {
+    const email = session.user.email || session.user.id;
+    setAuthStatus(`Signed in as ${email}`);
+    setAuthControls({ disableInputs: false, disableSignOut: false });
+  } else {
+    setAuthStatus("Not signed in.");
+    setAuthControls({ disableInputs: false, disableSignOut: true });
+  }
+}
+
+function initAuth() {
+  const supa = SUPABASE_CLIENT;
+  if (!supa?.auth?.getSession) {
+    setAuthStatus("Supabase auth unavailable on this page.");
+    setAuthControls({ disableInputs: true, disableSignOut: true });
+    return;
+  }
+
+  supa.auth.getSession().then(({ data }) => renderAuthState(data?.session));
+  supa.auth.onAuthStateChange((_event, session) => renderAuthState(session));
+
+  if (magicLinkBtn) {
+    magicLinkBtn.addEventListener("click", async () => {
+      const email = (authEmailInput?.value || "").trim();
+      if (!email) {
+        setAuthStatus("Enter an email to receive a login link.");
+        return;
+      }
+
+      setAuthControls({ disableInputs: true, disableSignOut: true });
+      setAuthStatus("Sending magic link...");
+      const { error } = await supa.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: SUPABASE_REDIRECT_URL },
+      });
+      if (error) {
+        console.error(error);
+        setAuthStatus("Error sending magic link. Check console.");
+      } else {
+        setAuthStatus(`Magic link sent to ${email}. Check your inbox.`);
+      }
+      setAuthControls({ disableInputs: false, disableSignOut: true });
+    });
+  }
+
+  if (signOutBtn) {
+    signOutBtn.addEventListener("click", async () => {
+      setAuthControls({ disableInputs: true, disableSignOut: true });
+      setAuthStatus("Signing out...");
+      const { error } = await supa.auth.signOut();
+      if (error) {
+        console.error(error);
+        setAuthStatus("Error signing out. Check console.");
+      } else {
+        setAuthStatus("Signed out.");
+      }
+      setAuthControls({ disableInputs: false, disableSignOut: true });
+    });
+  }
+}
+
 // ---------------------------------------------
 // SMOKE-TEST NOTE
 // ---------------------------------------------
-// To smoke test each workflow, POST JSON like { question: "hello" }
-// to the matching URL in N8N_WEBHOOKS. The UI uses the same endpoints.
+// To smoke test the edge function directly, POST JSON like
+// { chatInput: "hello", botId: "pinecone" } to CHAT_ROUTER_URL with a valid
+// Authorization: Bearer <supabase access token> header.
 
 // ---------------------------------------------
 // THEME TOGGLE
@@ -382,11 +491,25 @@ if (chatForm) {
       return;
     }
 
+    const token = await getSupabaseAccessToken();
+    if (!token) {
+      addMessageToConversation(bot.id, {
+        sender: "bot",
+        html: COPY.missingAuth,
+      });
+      hideThinking(bot);
+      return;
+    }
+
     try {
       const res = await fetch(bot.webhook, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: text, botId: bot.id }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        // n8n expects chatInput in the body (matches chat-html contract)
+        body: JSON.stringify({ chatInput: text, botId: bot.id }),
       });
 
       if (!res.ok) {
@@ -436,4 +559,5 @@ buildBotSwitcher();
 const storedBotId = safeStorageGet(STORAGE_KEYS.activeBot);
 setActiveBot(storedBotId && getBot(storedBotId) ? storedBotId : BOT_CONFIGS[0].id);
 updateBotChipState();
+initAuth();
 initTheme();

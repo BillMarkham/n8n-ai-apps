@@ -21,6 +21,15 @@
       </div>
     </nav>
 
+    <div class="auth-panel">
+      <div class="auth-row">
+        <input id="authEmail" type="email" placeholder="Email for magic link sign-in" autocomplete="email" />
+        <button id="magicLinkBtn" type="button" class="ghost-btn ghost-small">Send login link</button>
+        <button id="signOutBtn" type="button" class="ghost-btn ghost-small" disabled>Sign out</button>
+      </div>
+      <p id="authStatus" class="auth-status" aria-live="polite">Not signed in.</p>
+    </div>
+
     <div class="layout">
       <section class="chat-panel">
         <div class="panel-header">
@@ -54,6 +63,18 @@
     </div>
   </div>
 
+  <script>
+    // Override these in production (e.g., inject via your hosting platform).
+    window.CHAT_ROUTER_URL =
+      window.CHAT_ROUTER_URL ||
+      "https://telqsfmnlgoumazarwys.functions.supabase.co/chat-router";
+    window.SUPABASE_URL =
+      window.SUPABASE_URL || "https://telqsfmnlgoumazarwys.supabase.co";
+    window.SUPABASE_ANON_KEY =
+      window.SUPABASE_ANON_KEY ||
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlbHFzZm1ubGdvdW1hemFyd3lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MTkwNzAsImV4cCI6MjA3OTI5NTA3MH0.csDtDVy6AYm9PPl456hhUjamB87s1qZ-QKe81ZvbJEw";
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
