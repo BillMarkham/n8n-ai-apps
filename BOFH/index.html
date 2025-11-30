@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BOFH Episodes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="bg-fade"></div>
+  <div class="bg-fade second"></div>
+
+  <div class="app-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">BOFH</p>
+        <h1>BOFH Episode Library</h1>
+        <p class="lead">
+          Browse episodes from Supabase with a pastel, distraction-free reader. Double click a row to dive into the full clean_html view.
+        </p>
+        <div id="connectionStatus" class="status-pill">Not connected</div>
+      </div>
+
+      <form id="connectionForm" class="connection-card">
+        <div class="field">
+          <label for="supabaseUrl">Supabase URL</label>
+          <input id="supabaseUrl" name="supabaseUrl" type="url" placeholder="https://xyzcompany.supabase.co" required />
+        </div>
+        <div class="field">
+          <label for="supabaseKey">Anon/Public API key</label>
+          <input id="supabaseKey" name="supabaseKey" type="password" placeholder="eyJhbGciOi..." required />
+        </div>
+        <div class="field compact">
+          <label for="pageSize">Page size</label>
+          <input id="pageSize" name="pageSize" type="number" min="5" max="100" value="12" />
+        </div>
+        <button id="connectBtn" type="submit" class="cta">Connect</button>
+      </form>
+    </header>
+
+    <section id="summaryView" class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Summaries</p>
+          <h2>Episode Summaries</h2>
+          <p id="summaryMeta" class="muted">Load Supabase to see bofh_episodes.</p>
+        </div>
+        <div class="controls">
+          <span id="pageIndicator" class="muted">Page 1</span>
+          <div class="button-group">
+            <button id="pageUpBtn" type="button" class="ghost">Page Up</button>
+            <button id="pageDownBtn" type="button" class="ghost">Page Down</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-date">pub_date</th>
+              <th>summary</th>
+            </tr>
+          </thead>
+          <tbody id="summaryBody">
+            <tr class="empty-row">
+              <td colspan="2">Connect to Supabase to load bofh_episodes.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="detailView" class="panel hidden">
+      <div class="panel-header detail-header">
+        <div class="detail-titles">
+          <p class="eyebrow">Episode</p>
+          <h2 id="detailPubDate">---</h2>
+          <p id="detailSummary" class="muted"></p>
+        </div>
+        <div class="controls">
+          <div class="button-group">
+            <button id="detailPageUpBtn" type="button" class="ghost">Page Up</button>
+            <button id="detailPageDownBtn" type="button" class="ghost">Page Down</button>
+          </div>
+          <button id="returnBtn" type="button" class="cta ghosted">Return to Summary</button>
+        </div>
+      </div>
+
+      <div class="reader">
+        <div id="detailContent" class="reader-content">
+          <p class="muted">Double click a summary row to read the clean_html content.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
