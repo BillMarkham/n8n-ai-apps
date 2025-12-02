@@ -112,6 +112,11 @@ body {
   align-items: end;
 }
 
+.connection-card.slim {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  align-items: center;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -134,6 +139,10 @@ body {
 
 .field.compact input {
   width: 110px;
+}
+
+.small {
+  font-size: 13px;
 }
 
 button {

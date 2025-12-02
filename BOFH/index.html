@@ -17,36 +17,22 @@
   <div class="app-shell">
     <header class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">BOFH</p>
         <h1>BOFH Episode Library</h1>
-        <p class="lead">
-          Browse episodes from Supabase with a pastel, distraction-free reader. Double click a row to dive into the full clean_html view.
-        </p>
         <div id="connectionStatus" class="status-pill">Not connected</div>
       </div>
 
-      <form id="connectionForm" class="connection-card">
-        <div class="field">
-          <label for="supabaseUrl">Supabase URL</label>
-          <input id="supabaseUrl" name="supabaseUrl" type="url" placeholder="https://xyzcompany.supabase.co" required />
-        </div>
-        <div class="field">
-          <label for="supabaseKey">Anon/Public API key</label>
-          <input id="supabaseKey" name="supabaseKey" type="password" placeholder="eyJhbGciOi..." required />
-        </div>
+      <div class="connection-card slim">
         <div class="field compact">
           <label for="pageSize">Page size</label>
           <input id="pageSize" name="pageSize" type="number" min="5" max="100" value="12" />
         </div>
-        <button id="connectBtn" type="submit" class="cta">Connect</button>
-      </form>
+        <button id="refreshBtn" type="button" class="cta">Load episodes</button>
+      </div>
     </header>
 
     <section id="summaryView" class="panel">
       <div class="panel-header">
         <div>
-          <p class="eyebrow">Summaries</p>
-          <h2>Episode Summaries</h2>
           <p id="summaryMeta" class="muted">Load Supabase to see bofh_episodes.</p>
         </div>
         <div class="controls">

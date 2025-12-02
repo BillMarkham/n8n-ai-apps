@@ -1,8 +1,8 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.2/+esm";
-
-const supabaseUrlInput = document.getElementById("supabaseUrl");
-const supabaseKeyInput = document.getElementById("supabaseKey");
+const EDGE_FUNCTION_URL = "https://uekubxqptklrqzprezcu.supabase.co/functions/v1/bofh-proxy";
+// Supabase anon/public key is required to call Edge Functions. Service key stays server-side.
+const EDGE_FUNCTION_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVla3VieHFwdGtscnF6cHJlemN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczMjU5NDcsImV4cCI6MjA3MjkwMTk0N30.CkGArpC16uFHo3fXas8XXkzN0Uku9eHDy-b2-k71pMc";
 const pageSizeInput = document.getElementById("pageSize");
+const refreshBtn = document.getElementById("refreshBtn");
 const connectionStatus = document.getElementById("connectionStatus");
 const summaryBody = document.getElementById("summaryBody");
 const summaryMeta = document.getElementById("summaryMeta");
@@ -19,7 +19,6 @@ const detailView = document.getElementById("detailView");
 const returnBtn = document.getElementById("returnBtn");
 
 const state = {
-  client: null,
   page: 0,
   pageSize: 12,
   rows: [],
@@ -29,20 +28,14 @@ const state = {
 };
 
 function loadSavedSettings() {
-  const savedUrl = localStorage.getItem("bofh_supabase_url") || "";
-  const savedKey = localStorage.getItem("bofh_supabase_key") || "";
   const savedPageSize = localStorage.getItem("bofh_page_size");
-  if (savedUrl) supabaseUrlInput.value = savedUrl;
-  if (savedKey) supabaseKeyInput.value = savedKey;
   if (savedPageSize) {
     pageSizeInput.value = savedPageSize;
     state.pageSize = Number(savedPageSize);
   }
 }
 
-function saveSettings(url, key, pageSize) {
-  localStorage.setItem("bofh_supabase_url", url);
-  localStorage.setItem("bofh_supabase_key", key);
+function saveSettings(pageSize) {
   localStorage.setItem("bofh_page_size", String(pageSize));
 }
 
@@ -74,11 +67,6 @@ function renderPlaceholder(message) {
 }
 
 function renderRows() {
-  if (!state.client) {
-    renderPlaceholder("Connect to Supabase to load bofh_episodes.");
-    return;
-  }
-
   if (state.loading) {
     renderPlaceholder("Loading episodes...");
     return;
@@ -112,8 +100,8 @@ function updatePaginationMeta() {
   const showingTo = state.total ? Math.min((state.page + 1) * state.pageSize, state.total) : null;
   if (showingFrom && showingTo && state.total) {
     summaryMeta.textContent = `Showing ${showingFrom}-${showingTo} of ${state.total} bofh_episodes`;
-  } else if (state.client) {
-    summaryMeta.textContent = "Connected to Supabase - bofh_episodes";
+  } else {
+    summaryMeta.textContent = "Using Supabase Edge function (service key stays server-side)";
   }
 
   pageUpBtn.disabled = state.page === 0 || state.loading;
@@ -137,42 +125,63 @@ function updatePaginationMeta() {
 
 async function loadPage(targetPage, options = {}) {
   const { preserveSelection = false } = options;
-  if (!state.client) {
-    setConnectionStatus("Add Supabase URL and key, then Connect.", "muted");
+  if (targetPage < 0) return false;
+  if (!EDGE_FUNCTION_URL || EDGE_FUNCTION_URL.includes("YOUR_PROJECT_ID")) {
+    setConnectionStatus("Set EDGE_FUNCTION_URL in app.js to your Supabase function URL.", "error");
+    renderPlaceholder("Configure EDGE_FUNCTION_URL to load data.");
     return false;
   }
-  if (targetPage < 0) return false;
   if (state.total !== null && targetPage * state.pageSize >= state.total && state.total !== 0) return false;
 
   state.loading = true;
   renderRows();
   updatePaginationMeta();
-  const from = targetPage * state.pageSize;
-  const to = from + state.pageSize - 1;
 
-  const { data, error, count } = await state.client
-    .from("bofh_episodes")
-    .select("id,pub_date,summary,clean_html", { count: "exact" })
-    .order("pub_date", { ascending: false })
-    .range(from, to);
+  if (!EDGE_FUNCTION_ANON_KEY || EDGE_FUNCTION_ANON_KEY === "YOUR_SUPABASE_ANON_KEY") {
+    setConnectionStatus("Set EDGE_FUNCTION_ANON_KEY in app.js to your Supabase anon key.", "error");
+    renderPlaceholder("Missing EDGE_FUNCTION_ANON_KEY.");
+    updatePaginationMeta();
+    return false;
+  }
+
+  const response = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: EDGE_FUNCTION_ANON_KEY,
+      Authorization: `Bearer ${EDGE_FUNCTION_ANON_KEY}`,
+    },
+    body: JSON.stringify({ page: targetPage, pageSize: state.pageSize }),
+  }).catch((err) => ({ ok: false, statusText: err.message }));
 
   state.loading = false;
 
-  if (error) {
+  if (!response || !response.ok) {
+    const message = response?.statusText || "Network error";
     setConnectionStatus("Error loading bofh_episodes", "error");
-    summaryMeta.textContent = error.message;
-    renderPlaceholder(error.message);
+    summaryMeta.textContent = message;
+    renderPlaceholder(message);
+    updatePaginationMeta();
+    return false;
+  }
+
+  const payload = await response.json().catch(() => null);
+  if (!payload || payload.error) {
+    const message = payload?.error || "Unexpected response";
+    setConnectionStatus("Error loading bofh_episodes", "error");
+    summaryMeta.textContent = message;
+    renderPlaceholder(message);
     updatePaginationMeta();
     return false;
   }
 
   state.page = targetPage;
-  state.rows = data || [];
-  state.total = typeof count === "number" ? count : state.total;
+  state.rows = payload.data || [];
+  state.total = typeof payload.count === "number" ? payload.count : state.total;
   if (!preserveSelection) {
     state.selectedGlobalIndex = null;
   }
-  setConnectionStatus("Connected", "ok");
+  setConnectionStatus("Connected via Edge function", "ok");
   renderRows();
   updatePaginationMeta();
   return true;
@@ -216,29 +225,19 @@ async function shiftDetail(offset) {
   if (row) openDetail(row, localIndex);
 }
 
-async function handleConnect(event) {
-  event.preventDefault();
-  const url = supabaseUrlInput.value.trim();
-  const key = supabaseKeyInput.value.trim();
+async function refreshData() {
   const size = Number(pageSizeInput.value) || state.pageSize;
-
-  if (!url || !key) {
-    setConnectionStatus("Supabase URL and anon key are required.", "error");
-    return;
-  }
-
   state.pageSize = Math.min(Math.max(size, 5), 100);
   pageSizeInput.value = state.pageSize;
-  state.client = createClient(url, key);
-  saveSettings(url, key, state.pageSize);
+  saveSettings(state.pageSize);
   state.page = 0;
   state.selectedGlobalIndex = null;
-  summaryMeta.textContent = "Connecting to Supabase...";
+  summaryMeta.textContent = "Loading via Edge function...";
   await loadPage(0);
 }
 
 function setupInteractions() {
-  document.getElementById("connectionForm").addEventListener("submit", handleConnect);
+  refreshBtn.addEventListener("click", () => refreshData());
   pageDownBtn.addEventListener("click", () => loadPage(state.page + 1));
   pageUpBtn.addEventListener("click", () => loadPage(state.page - 1));
 
@@ -257,6 +256,7 @@ function setupInteractions() {
 function init() {
   loadSavedSettings();
   setupInteractions();
+  refreshData();
 }
 
 init();
