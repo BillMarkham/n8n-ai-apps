@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Old Windsor Hydro-Meteo Dashboard</title>
+  <link rel="stylesheet" href="theme.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body data-supabase-url="" data-supabase-key="">
+  <header class="top-bar">
+    <div>
+      <h1>Old Windsor Hydro-Meteo Dashboard</h1>
+      <p class="subhead">Live river, weather, and precipitation telemetry</p>
+    </div>
+    <div class="status-wrap">
+      <span class="status-dot" id="status-dot"></span>
+      <span class="status-text" id="status-text">Loading…</span>
+    </div>
+  </header>
+
+  <main class="page">
+    <section id="error-banner" class="error-banner hidden">
+      <div>
+        <strong>Data error:</strong>
+        <span id="error-message">Unable to load data.</span>
+      </div>
+    </section>
+
+    <section class="controls">
+      <div class="view-toggle" role="group" aria-label="View switcher">
+        <button id="table-view-btn" class="active" data-target="table-view">Table View</button>
+        <button id="graph-view-btn" data-target="graph-view">Graph View</button>
+      </div>
+    </section>
+
+    <section class="layout">
+      <div class="column">
+        <section class="card summaries">
+          <div class="card-header">
+            <h2>Recent Summaries</h2>
+          </div>
+          <div id="summaries" class="summary-list"></div>
+        </section>
+
+        <section class="card" id="table-view">
+          <div class="card-header">
+            <h2>Telemetry Table</h2>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Station</th>
+                  <th>River Level (m)</th>
+                  <th>Flow</th>
+                  <th>EA Rainfall</th>
+                  <th>OM Precip (mm)</th>
+                  <th>Combined Precip (mm)</th>
+                  <th>Temp (°C)</th>
+                  <th>Wind Speed (mph)</th>
+                  <th>Wind Dir</th>
+                </tr>
+              </thead>
+              <tbody id="table-body">
+                <tr><td colspan="10" class="placeholder">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <section class="card graphs hidden" id="graph-view">
+        <div class="card-header">
+          <h2>Charts</h2>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>River Level vs Time</h3>
+            <canvas id="river-chart" height="200"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Precipitation (Combined)</h3>
+            <canvas id="precip-chart" height="200"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Temperature vs Time</h3>
+            <canvas id="temp-chart" height="200"></canvas>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
