@@ -8,6 +8,12 @@
   const viewButtons = document.querySelectorAll('.view-toggle button');
   const tableView = document.getElementById('table-view');
   const graphView = document.getElementById('graph-view');
+  const chartBackdrop = document.getElementById('chart-backdrop');
+
+  const DEFAULT_SUPABASE_URL = 'https://uekubxqptklrqzprezcu.supabase.co';
+  const DEFAULT_SUPABASE_ANON_KEY =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVla3VieHFwdGtscnF6cHJlemN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTczMjU5NDcsImV4cCI6MjA3MjkwMTk0N30.CkGArpC16uFHo3fXas8XXkzN0Uku9eHDy-b2-k71pMc';
+  const DEFAULT_PROXY_URL = 'https://uekubxqptklrqzprezcu.supabase.co/functions/v1/bofh-proxy';
 
   const charts = {
     river: null,
@@ -19,6 +25,7 @@
 
   function init() {
     setupViewSwitcher();
+    setupChartMaximizer();
     loadData();
   }
 
@@ -43,7 +50,7 @@
     setStatus('loading', 'Loading…');
     hideError();
     try {
-      const supabase = createSupabaseClient();
+      const supabase = await createSupabaseClient();
       const [series, summaries] = await Promise.all([
         fetchTimeSeries(supabase),
         fetchSummaries(supabase)
@@ -59,21 +66,79 @@
     }
   }
 
-  function createSupabaseClient() {
-    const url =
+  async function createSupabaseClient() {
+    let url =
       window.SUPABASE_URL ||
       document.body.dataset.supabaseUrl ||
-      (window.__SUPABASE && window.__SUPABASE.url);
-    const key =
+      (window.__SUPABASE && window.__SUPABASE.url) ||
+      DEFAULT_SUPABASE_URL;
+    let key =
       window.SUPABASE_ANON_KEY ||
       document.body.dataset.supabaseKey ||
-      (window.__SUPABASE && window.__SUPABASE.key);
+      (window.__SUPABASE && window.__SUPABASE.key) ||
+      DEFAULT_SUPABASE_ANON_KEY;
+
+    // If missing, attempt to hydrate from local supabase folder or proxy.
+    if (!url || !key) {
+      const fromConfig = await loadCredentialsFromConfig();
+      url = url || fromConfig?.url;
+      key = key || fromConfig?.anonKey;
+    }
+
     if (!url || !key) {
       throw new Error(
-        'Supabase credentials missing. Provide SUPABASE_URL and SUPABASE_ANON_KEY (e.g., via body data attributes or window variables).'
+        'Supabase credentials missing. Provide SUPABASE_URL and SUPABASE_ANON_KEY (e.g., via body data attributes, window variables, supabase/creds.json, or BOFH proxy).'
       );
     }
     return window.supabase.createClient(url, key);
+  }
+
+  async function loadCredentialsFromConfig() {
+    // Prefer a proxied source if provided (e.g., bofh-proxy returning JSON with {url, anonKey}).
+    const proxyUrl =
+      window.BOFH_PROXY_CREDS_URL ||
+      document.body.dataset.bofhProxyUrl ||
+      DEFAULT_PROXY_URL;
+    if (proxyUrl) {
+      try {
+        const headers = {};
+        const token =
+          window.BOFH_PROXY_TOKEN ||
+          window.SUPABASE_ANON_KEY ||
+          document.body.dataset.supabaseKey ||
+          (window.__SUPABASE && window.__SUPABASE.key) ||
+          DEFAULT_SUPABASE_ANON_KEY;
+        if (token) {
+          headers.apikey = token;
+          headers.Authorization = `Bearer ${token}`;
+        }
+        const res = await fetch(proxyUrl, { method: 'GET', headers });
+        if (res.ok) {
+          const payload = await res.json();
+          if (payload?.url && (payload.anonKey || payload.key)) {
+            return { url: payload.url, anonKey: payload.anonKey || payload.key };
+          }
+          if (payload?.projectUrl && payload?.anon) {
+            return { url: payload.projectUrl, anonKey: payload.anon };
+          }
+          return payload;
+        }
+      } catch (err) {
+        console.warn('Proxy credential fetch failed', err);
+      }
+    }
+
+    // Fallback to sibling supabase folder for local development: ../supabase/creds.json
+    try {
+      const res = await fetch('../supabase/creds.json', { cache: 'no-store' });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      console.warn('Local credential file fetch failed', err);
+    }
+
+    return null;
   }
 
   async function fetchTimeSeries(client) {
@@ -94,29 +159,25 @@
       .from('timeseries_hydro_meteo_summary')
       .select('generated_at, window_start, window_end, summary_text, risk_level, forecast_text')
       .order('generated_at', { ascending: false })
-      .limit(3)
+      .limit(1)
       .throwOnError();
     return data || [];
   }
 
   function renderTable(rows) {
     if (!rows || rows.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="10" class="placeholder">No data available.</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="8" class="placeholder">No data available.</td></tr>';
       return;
     }
 
     const formatter = buildDateFormatter();
     const cells = rows
       .map((row) => {
-        const eaRain = row.ea_precip_mm ?? null;
-        const flow = row.flow_m3s ?? null;
         return `
           <tr>
             <td>${formatter.format(new Date(row.ts))}</td>
             <td>${row.station_id ?? '-'}</td>
             <td>${formatNumber(row.river_level_m, 3)}</td>
-            <td>${formatNumber(flow)}</td>
-            <td>${formatNumber(eaRain)}</td>
             <td>${formatNumber(row.om_precip_mm)}</td>
             <td>${formatNumber(row.combined_precip_mm)}</td>
             <td>${formatNumber(row.temp_c, 1)}</td>
@@ -230,6 +291,46 @@
     });
   }
 
+  function setupChartMaximizer() {
+    const buttons = document.querySelectorAll('.maximize-btn');
+    let activeCard = null;
+
+    const restore = () => {
+      if (!activeCard) return;
+      activeCard.classList.remove('maximized');
+      const btn = activeCard.querySelector('.maximize-btn');
+      if (btn) btn.textContent = 'Maximize';
+      activeCard = null;
+      if (chartBackdrop) chartBackdrop.classList.add('hidden');
+      document.body.classList.remove('chart-expanded');
+    };
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('.chart-card');
+        if (!card) return;
+        if (card.classList.contains('maximized')) {
+          restore();
+          return;
+        }
+        restore();
+        card.classList.add('maximized');
+        btn.textContent = 'Restore';
+        activeCard = card;
+        if (chartBackdrop) chartBackdrop.classList.remove('hidden');
+        document.body.classList.add('chart-expanded');
+      });
+    });
+
+    if (chartBackdrop) {
+      chartBackdrop.addEventListener('click', restore);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') restore();
+    });
+  }
+
   function renderSummaries(rows) {
     if (!rows || rows.length === 0) {
       summariesContainer.innerHTML = '<div class="placeholder">No summaries available.</div>';
@@ -242,9 +343,7 @@
         return `
           <div class="summary-card">
             <div class="summary-meta">
-              <span>${formatter.format(new Date(row.window_start))} → ${formatter.format(
-                new Date(row.window_end)
-              )}</span>
+              <span class="label">Risk</span>
               <span class="badge ${badgeClass}">${row.risk_level ?? 'N/A'}</span>
             </div>
             <div class="summary-text">${row.summary_text ?? 'No summary provided.'}</div>

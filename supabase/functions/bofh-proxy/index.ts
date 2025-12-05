@@ -1,12 +1,15 @@
 // Edge function to proxy BOFH episode reads without exposing keys to the frontend.
+// Also supports GET for returning anon credentials to trusted frontends.
 // Env vars required: PROJECT_URL, SERVICE_ROLE_KEY.
-// Optional: ALLOWED_ORIGIN (defaults to "*").
+// Optional: ALLOWED_ORIGIN (defaults to "*"), ANON_KEY (or SUPABASE_ANON_KEY).
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.2";
 
 const SUPABASE_URL = Deno.env.get("PROJECT_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY")!;
+const SUPABASE_ANON_KEY =
+  Deno.env.get("ANON_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("PUBLIC_ANON_KEY") || "";
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "*";
 
 export const config = {
@@ -43,6 +46,12 @@ serve(async (req) => {
         "Access-Control-Max-Age": "86400",
       },
     });
+  }
+  if (req.method === "GET") {
+    if (!SUPABASE_ANON_KEY) {
+      return respond({ error: "Missing anon key on edge function" }, { status: 500 });
+    }
+    return respond({ url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY });
   }
   if (req.method !== "POST") return respond({ error: "Method not allowed" }, { status: 405 });
 
