@@ -1,0 +1,60 @@
+{
+  "name": "Test Error Generator",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "test-manual-trigger",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate a test error\nconsole.log('About to throw a test error...');\n\nthrow new Error('This is a deliberate test error to verify the Error Handler workflow is working correctly!');"
+      },
+      "id": "throw-test-error",
+      "name": "Throw Test Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Test Error Generator\n\nThis workflow deliberately throws an error to test your Error Handler.\n\n### How to use:\n\n1. Make sure \"Error Handler: Claude\" workflow is **ACTIVATED**\n2. Open this workflow's **Settings**\n3. Set **Error Workflow** to \"Error Handler: Claude\"\n4. Click **Test workflow** button\n5. Check the Error Handler workflow executions\n\n### Expected Result:\n\n- This workflow will fail at the \"Throw Test Error\" node\n- The Error Handler should trigger automatically\n- You should see a new execution in the Error Handler workflow\n- Check the Error Handler logs for the Claude analysis\n\n### If it doesn't work:\n\n- Verify Error Handler is activated (toggle ON)\n- Verify this workflow has Error Workflow set in settings\n- Check n8n logs for any system errors\n- Ensure you're using n8n version 0.228.0 or later",
+        "height": 580,
+        "width": 440,
+        "color": 5
+      },
+      "id": "instructions-note",
+      "name": "Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 420]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Throw Test Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "instanceId": "n8n-ai-apps"
+  },
+  "id": "test-error-generator",
+  "tags": []
+}

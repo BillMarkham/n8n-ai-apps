@@ -2,6 +2,12 @@
 
 This directory contains n8n workflow templates for the n8n-ai-apps project.
 
+## Workflows
+
+- **Error_Handler_Claude.json** - AI-powered error handler using Claude
+- **Test_Error_Generator.json** - Test workflow to verify error handler works
+- **TROUBLESHOOTING.md** - Comprehensive troubleshooting guide
+
 ## Error Handler: Claude
 
 **File:** `Error_Handler_Claude.json`
@@ -171,15 +177,21 @@ service on port 5000. This typically means...
 
 ### Troubleshooting
 
+⚠️ **Error handler not firing?** See the comprehensive **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** guide for detailed solutions.
+
+#### Quick Fixes
+
 **Workflow not receiving errors:**
-- Ensure "Error Handler: Claude" is activated
-- Verify it's selected in the source workflow's settings
-- Check that the source workflow has error handling enabled
+- ✅ Ensure "Error Handler: Claude" is **activated** (toggle ON)
+- ✅ Verify it's selected in the source workflow's **Settings → Error Workflow**
+- ✅ Test with `Test_Error_Generator.json` workflow (import and run)
+- ✅ Check Error Handler executions list for any runs
 
 **Claude API errors:**
 - Verify your API key is correct and has sufficient credits
 - Check the credential name matches: "Anthropic API Key"
 - Ensure the header name is exactly: `x-api-key`
+- Test credential by running the workflow manually
 
 **Missing analysis:**
 - Check n8n console for API response errors
@@ -190,6 +202,14 @@ service on port 5000. This typically means...
 - Verify the **Check if Critical** condition matches your needs
 - Ensure notification node credentials are configured
 - Check the notification service is reachable
+
+#### Test Your Setup
+
+Use the **Test_Error_Generator.json** workflow:
+1. Import the test workflow
+2. Set its Error Workflow to "Error Handler: Claude"
+3. Click "Test workflow" - it will deliberately fail
+4. Check Error Handler executions for the triggered analysis
 
 ### Best Practices
 
