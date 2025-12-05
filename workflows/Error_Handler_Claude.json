@@ -1,0 +1,226 @@
+{
+  "name": "Error Handler: Claude",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "8a5c3b1e-9d4f-4a2c-8e3b-1a2b3c4d5e6f",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and format error details\nconst errorData = $input.item.json;\n\n// Build comprehensive error context\nconst errorContext = {\n  timestamp: new Date().toISOString(),\n  workflow: {\n    id: errorData.workflow?.id || 'unknown',\n    name: errorData.workflow?.name || 'unknown',\n    active: errorData.workflow?.active\n  },\n  execution: {\n    id: errorData.execution?.id || 'unknown',\n    mode: errorData.execution?.mode || 'unknown',\n    startedAt: errorData.execution?.startedAt,\n    stoppedAt: errorData.execution?.stoppedAt\n  },\n  error: {\n    message: errorData.error?.message || 'No error message',\n    description: errorData.error?.description || '',\n    stack: errorData.error?.stack || '',\n    node: errorData.error?.node?.name || 'unknown',\n    nodeType: errorData.error?.node?.type || 'unknown',\n    timestamp: errorData.error?.timestamp || new Date().toISOString()\n  },\n  inputData: errorData.error?.context?.data || {},\n  parameters: errorData.error?.node?.parameters || {}\n};\n\n// Create a formatted prompt for Claude\nconst promptForClaude = `You are an expert n8n workflow debugger. Analyze the following error and provide:\n\n1. **Root Cause Analysis**: What caused this error?\n2. **Impact Assessment**: What are the potential impacts?\n3. **Recommended Solutions**: Step-by-step fix suggestions\n4. **Prevention**: How to prevent this error in the future\n\n## Error Details:\n\n**Workflow:** ${errorContext.workflow.name} (ID: ${errorContext.workflow.id})\n**Node:** ${errorContext.error.node} (Type: ${errorContext.error.nodeType})\n**Execution ID:** ${errorContext.execution.id}\n**Timestamp:** ${errorContext.timestamp}\n\n**Error Message:**\n${errorContext.error.message}\n\n**Error Description:**\n${errorContext.error.description || 'N/A'}\n\n**Stack Trace:**\n\\`\\`\\`\n${errorContext.error.stack}\n\\`\\`\\`\n\n**Node Parameters:**\n\\`\\`\\`json\n${JSON.stringify(errorContext.parameters, null, 2)}\n\\`\\`\\`\n\n**Input Data:**\n\\`\\`\\`json\n${JSON.stringify(errorContext.inputData, null, 2)}\n\\`\\`\\`\n\nPlease provide a clear, actionable analysis.`;\n\nreturn {\n  errorContext,\n  promptForClaude\n};"
+      },
+      "id": "7b4d2a3e-8c5f-4b1d-9e2f-2b3c4d5e6f7a",
+      "name": "Extract Error Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-3-5-sonnet-20241022\",\n  \"max_tokens\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.promptForClaude) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "6c3d1b2a-7d4e-5c2f-8f3a-3c4d5e6f7a8b",
+      "name": "Send to Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic_api_key",
+          "name": "Anthropic API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract Claude's response and combine with error context\nconst claudeResponse = $input.item.json;\nconst errorContext = $('Extract Error Details').item.json.errorContext;\n\n// Extract the actual text content from Claude's response\nconst analysis = claudeResponse.content?.[0]?.text || 'No analysis received from Claude';\n\n// Build the complete error report\nconst errorReport = {\n  ...errorContext,\n  claudeAnalysis: analysis,\n  reportGenerated: new Date().toISOString(),\n  severity: determineSeverity(errorContext.error.message)\n};\n\n// Helper function to determine error severity\nfunction determineSeverity(errorMessage) {\n  const msg = errorMessage.toLowerCase();\n  \n  if (msg.includes('fatal') || msg.includes('critical') || msg.includes('crash')) {\n    return 'CRITICAL';\n  } else if (msg.includes('timeout') || msg.includes('connection') || msg.includes('network')) {\n    return 'HIGH';\n  } else if (msg.includes('warning') || msg.includes('deprecated')) {\n    return 'MEDIUM';\n  }\n  \n  return 'HIGH'; // Default to HIGH for unclassified errors\n}\n\n// Create a formatted summary for notifications\nconst summary = {\n  title: `🚨 Error in ${errorContext.workflow.name}`,\n  severity: errorReport.severity,\n  node: errorContext.error.node,\n  message: errorContext.error.message,\n  timestamp: errorContext.timestamp,\n  executionId: errorContext.execution.id,\n  analysisPreview: analysis.substring(0, 500) + (analysis.length > 500 ? '...' : '')\n};\n\nreturn {\n  errorReport,\n  summary\n};"
+      },
+      "id": "5d2c4e3f-6b7a-4c1e-9f8d-4d5e6f7a8b9c",
+      "name": "Format Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log the error report to console and return for further processing\nconst { errorReport, summary } = $input.item.json;\n\n// Log to n8n console\nconsole.log('='.repeat(80));\nconsole.log('ERROR REPORT - ' + summary.title);\nconsole.log('='.repeat(80));\nconsole.log('Severity:', summary.severity);\nconsole.log('Workflow:', errorReport.workflow.name);\nconsole.log('Node:', summary.node);\nconsole.log('Execution ID:', summary.executionId);\nconsole.log('Timestamp:', summary.timestamp);\nconsole.log('\\nError Message:');\nconsole.log(summary.message);\nconsole.log('\\nClaude Analysis:');\nconsole.log(errorReport.claudeAnalysis);\nconsole.log('='.repeat(80));\n\n// Return both for downstream nodes\nreturn { errorReport, summary };"
+      },
+      "id": "4e1d3f2a-5c6b-7d8e-9a0f-5e6f7a8b9c0d",
+      "name": "Log Error Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "notification_enabled",
+              "leftValue": "={{ $json.summary.severity }}",
+              "rightValue": "CRITICAL",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "3f2e4d5a-6c7b-8e9f-0a1b-6f7a8b9c0d1e",
+      "name": "Check if Critical",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Error Handler: Claude Workflow\n\nThis workflow serves as a centralized error handler for other n8n workflows.\n\n### How it works:\n\n1. **Error Trigger**: Automatically receives errors from workflows that reference this as their error workflow\n2. **Extract Error Details**: Gathers comprehensive error context including workflow info, execution data, and error details\n3. **Send to Claude API**: Sends error information to Claude AI for intelligent analysis\n4. **Format Analysis**: Processes Claude's response and determines error severity\n5. **Log Error Report**: Logs detailed error information and analysis to console\n6. **Check if Critical**: Routes critical errors for immediate notification\n7. **Send Notification**: (Optional) Sends alerts via email, Slack, or other channels\n\n### Setup Instructions:\n\n1. **Configure Anthropic API Key**:\n   - Go to Credentials in n8n\n   - Create a new \"Header Auth\" credential named \"Anthropic API Key\"\n   - Add header: `x-api-key` with your Anthropic API key value\n\n2. **Set as Error Workflow**:\n   - In your main workflows, go to Settings\n   - Under \"Error Workflow\", select \"Error Handler: Claude\"\n\n3. **Customize Notifications** (Optional):\n   - Connect the \"Send Notification\" node to your preferred notification service\n   - Configure email, Slack, Discord, or webhook endpoints\n\n4. **Adjust Severity Logic**:\n   - Modify the `determineSeverity()` function in \"Format Analysis\" node\n   - Update the \"Check if Critical\" condition as needed\n\n### Features:\n\n- ✅ Automatic error capture from any workflow\n- ✅ AI-powered error analysis using Claude\n- ✅ Root cause identification\n- ✅ Actionable solution recommendations\n- ✅ Severity classification\n- ✅ Detailed logging\n- ✅ Optional notifications for critical errors\n\n### Note:\n\nMake sure to activate this workflow for it to receive error events from other workflows.",
+        "height": 870,
+        "width": 460,
+        "color": 4
+      },
+      "id": "2e3f4a5b-6c7d-8e9f-0a1b-7a8b9c0d1e2f",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 460]
+    },
+    {
+      "parameters": {
+        "content": "## 🔧 OPTIONAL: Add Your Notification Service Here\n\nConnect this node to send alerts for critical errors.\n\nSuggested services:\n- Email (Send Email node)\n- Slack (Slack node)\n- Discord (Discord node)  \n- Microsoft Teams\n- Custom Webhook\n- SMS (Twilio)\n\nThe error report and summary are available in `$json` for formatting your notification.",
+        "height": 340,
+        "width": 380,
+        "color": 6
+      },
+      "id": "1f2e3d4c-5b6a-7c8d-9e0f-8b9c0d1e2f3a",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1440, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Placeholder for sending notifications\n// This node receives data only when severity is CRITICAL\n\nconst { errorReport, summary } = $input.item.json;\n\n// Example notification message format\nconst notificationMessage = `🚨 CRITICAL ERROR ALERT\n\nWorkflow: ${errorReport.workflow.name}\nNode: ${summary.node}\nTime: ${summary.timestamp}\n\nError: ${summary.message}\n\nExecution ID: ${summary.executionId}\n\n📋 Claude Analysis:\n${summary.analysisPreview}\n\n---\nSeverity: ${summary.severity}\nView full report in n8n logs.`;\n\nconsole.log('CRITICAL ERROR - Notification triggered');\nconsole.log(notificationMessage);\n\n// Return formatted data for downstream notification nodes\nreturn {\n  subject: summary.title,\n  message: notificationMessage,\n  errorReport,\n  summary\n};"
+      },
+      "id": "0e1f2d3c-4b5a-6c7d-8e9f-9c0d1e2f3a4b",
+      "name": "Send Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 200]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Error Details": {
+      "main": [
+        [
+          {
+            "node": "Send to Claude API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Claude API": {
+      "main": [
+        [
+          {
+            "node": "Format Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Analysis": {
+      "main": [
+        [
+          {
+            "node": "Log Error Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error Report": {
+      "main": [
+        [
+          {
+            "node": "Check if Critical",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Critical": {
+      "main": [
+        [
+          {
+            "node": "Send Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "instanceId": "n8n-ai-apps"
+  },
+  "id": "error-handler-claude",
+  "tags": []
+}

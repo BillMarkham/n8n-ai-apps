@@ -9,6 +9,9 @@ Apps
 - chat-sql/: Legacy redirect into the multi-bot shell.
 - cors-proxy/: Legacy CORS/ngrok proxy (not required for direct local use).
 
+Workflows
+- workflows/: n8n workflow templates including error handlers and automation workflows. See workflows/README.md for details.
+
 Run an app
 1) Ensure the corresponding n8n workflow is running and reachable at its webhook URL (ngrok must be active for the Chat html endpoint).
 2) Open the app's index.html in your browser (e.g., double-click or use VS Code Live Server).
